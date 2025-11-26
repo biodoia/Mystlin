@@ -1,0 +1,175 @@
+{
+  "name": "mysti",
+  "displayName": "Mysti - AI Coding Assistant",
+  "description": "A powerful AI coding assistant interface supporting multiple AI backends including Claude Code CLI",
+  "version": "0.1.0",
+  "publisher": "mysti",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "assistant",
+    "claude",
+    "coding",
+    "copilot"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mysti-sidebar",
+          "title": "Mysti",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "mysti-sidebar": [
+        {
+          "type": "webview",
+          "id": "mysti.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "mysti.openChat",
+        "title": "Open Mysti Chat",
+        "category": "Mysti"
+      },
+      {
+        "command": "mysti.newConversation",
+        "title": "New Conversation",
+        "category": "Mysti"
+      },
+      {
+        "command": "mysti.addToContext",
+        "title": "Add to Mysti Context",
+        "category": "Mysti"
+      },
+      {
+        "command": "mysti.clearContext",
+        "title": "Clear Context",
+        "category": "Mysti"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "mysti.addToContext",
+          "group": "mysti"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "mysti.addToContext",
+          "group": "mysti"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Mysti",
+      "properties": {
+        "mysti.defaultProvider": {
+          "type": "string",
+          "default": "claude-code",
+          "enum": [
+            "claude-code"
+          ],
+          "enumDescriptions": [
+            "Claude Code CLI"
+          ],
+          "description": "Default AI provider to use"
+        },
+        "mysti.claudeCodePath": {
+          "type": "string",
+          "default": "claude",
+          "description": "Path to Claude Code CLI executable"
+        },
+        "mysti.defaultMode": {
+          "type": "string",
+          "default": "ask-before-edit",
+          "enum": [
+            "ask-before-edit",
+            "edit-automatically",
+            "plan",
+            "brainstorm"
+          ],
+          "description": "Default operation mode"
+        },
+        "mysti.defaultThinkingLevel": {
+          "type": "string",
+          "default": "medium",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ],
+          "description": "Default thinking level for AI responses"
+        },
+        "mysti.defaultModel": {
+          "type": "string",
+          "default": "claude-sonnet-4-5-20250929",
+          "description": "Default model to use"
+        },
+        "mysti.accessLevel": {
+          "type": "string",
+          "default": "ask-permission",
+          "enum": [
+            "read-only",
+            "ask-permission",
+            "full-access"
+          ],
+          "description": "Default access level for file operations"
+        },
+        "mysti.autoContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically include relevant context"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "mysti.openChat",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.2",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "marked": "^15.0.0",
+    "prismjs": "^1.29.0",
+    "uuid": "^9.0.1"
+  }
+}
