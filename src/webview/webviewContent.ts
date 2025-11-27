@@ -3049,6 +3049,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
       }
 
       let state = {
+        panelId: null,  // Unique ID for this panel
         settings: {
           mode: 'ask-before-edit',
           thinkingLevel: 'medium',
@@ -3072,6 +3073,12 @@ function getScript(mermaidUri: string, logoUri: string): string {
         autocompleteSuggestion: null,
         autocompleteType: null
       };
+
+      // Helper to send messages with panelId
+      function postMessageWithPanelId(msg) {
+        msg.panelId = state.panelId;
+        vscode.postMessage(msg);
+      }
 
       // Autocomplete variables
       var autocompleteDebounceTimer = null;
@@ -3263,7 +3270,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
       });
 
       newChatBtn.addEventListener('click', function() {
-        vscode.postMessage({ type: 'newConversation' });
+        postMessageWithPanelId({ type: 'newConversation' });
         clearMessages();
       });
 
@@ -3273,7 +3280,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
           e.stopPropagation();
           historyMenu.classList.toggle('hidden');
           if (!historyMenu.classList.contains('hidden')) {
-            vscode.postMessage({ type: 'getConversationHistory' });
+            postMessageWithPanelId({ type: 'getConversationHistory' });
           }
         });
       }
@@ -3312,7 +3319,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
           // Click to switch conversation
           item.addEventListener('click', function(e) {
             if (!e.target.classList.contains('history-item-delete')) {
-              vscode.postMessage({ type: 'switchConversation', payload: { id: conv.id } });
+              postMessageWithPanelId({ type: 'switchConversation', payload: { id: conv.id } });
               historyMenu.classList.add('hidden');
             }
           });
@@ -3320,7 +3327,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
           // Delete button
           item.querySelector('.history-item-delete').addEventListener('click', function(e) {
             e.stopPropagation();
-            vscode.postMessage({ type: 'deleteConversation', payload: { id: conv.id } });
+            postMessageWithPanelId({ type: 'deleteConversation', payload: { id: conv.id } });
           });
 
           historyMenu.appendChild(item);
@@ -3598,7 +3605,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
           case 'titleUpdated':
             // Title was updated by AI, refresh history if open
             if (historyMenu && !historyMenu.classList.contains('hidden')) {
-              vscode.postMessage({ type: 'getConversationHistory' });
+              postMessageWithPanelId({ type: 'getConversationHistory' });
             }
             break;
           case 'insertPrompt':

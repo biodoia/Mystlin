@@ -8,9 +8,18 @@ import { BrainstormManager } from '../managers/BrainstormManager';
 import { getWebviewContent } from '../webview/webviewContent';
 import type { WebviewMessage, Settings, ContextItem, QuickActionSuggestion, Message } from '../types';
 
+interface PanelState {
+  id: string;
+  webview: vscode.Webview;
+  panel?: vscode.WebviewPanel;
+  currentConversationId: string | null;
+  isSidebar: boolean;
+}
+
 export class ChatViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
-  private _detachedPanels: vscode.WebviewPanel[] = [];
+  private _panelStates: Map<string, PanelState> = new Map();
+  private readonly _sidebarId = 'sidebar';
   private _extensionUri: vscode.Uri;
   private _contextManager: ContextManager;
   private _conversationManager: ConversationManager;
@@ -49,16 +58,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = getWebviewContent(webviewView.webview, this._extensionUri);
 
+    // Register sidebar in panel states
+    const currentConversation = this._conversationManager.getCurrentConversation();
+    this._panelStates.set(this._sidebarId, {
+      id: this._sidebarId,
+      webview: webviewView.webview,
+      currentConversationId: currentConversation?.id || null,
+      isSidebar: true
+    });
+
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
       await this._handleMessage(message);
     });
 
-    // Send initial state
-    this._sendInitialState();
+    // Send initial state with panelId
+    this._sendInitialState(this._sidebarId);
   }
 
-  private async _sendInitialState() {
+  private async _sendInitialState(panelId: string) {
     const config = vscode.workspace.getConfiguration('mysti');
     const settings: Settings = {
       mode: config.get('defaultMode', 'ask-before-edit'),
@@ -69,12 +87,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       provider: config.get('defaultProvider', 'claude-code')
     };
 
-    this.postMessage({
+    const panelState = this._panelStates.get(panelId);
+    const conversation = panelState?.currentConversationId
+      ? this._conversationManager.getConversation(panelState.currentConversationId)
+      : this._conversationManager.getCurrentConversation();
+
+    this._postToPanel(panelId, {
       type: 'initialState',
       payload: {
+        panelId,
         settings,
         context: this._contextManager.getContext(),
-        conversation: this._conversationManager.getCurrentConversation(),
+        conversation,
         providers: this._providerManager.getProviders(),
         slashCommands: this._getSlashCommands(),
         quickActions: this._getQuickActions()
@@ -150,16 +174,26 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'newConversation':
-        this._providerManager.clearSession();  // Clear Claude session
-        this._conversationManager.createNewConversation();
-        this.postMessage({
-          type: 'conversationChanged',
-          payload: this._conversationManager.getCurrentConversation()
-        });
-        this.postMessage({
-          type: 'sessionCleared',
-          payload: { message: 'Session cleared' }
-        });
+        {
+          const panelId = (message as any).panelId;
+          const panelState = this._panelStates.get(panelId);
+
+          this._providerManager.clearSession();  // Clear Claude session
+          const newConv = this._conversationManager.createNewConversation();
+
+          if (panelState) {
+            panelState.currentConversationId = newConv.id;
+          }
+
+          this._postToPanel(panelId, {
+            type: 'conversationChanged',
+            payload: newConv
+          });
+          this._postToPanel(panelId, {
+            type: 'sessionCleared',
+            payload: { message: 'Session cleared' }
+          });
+        }
         break;
 
       case 'clearSession':
@@ -211,44 +245,64 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'getConversationHistory':
-        this.postMessage({
-          type: 'conversationHistory',
-          payload: {
-            conversations: this._conversationManager.getAllConversations(),
-            currentId: this._conversationManager.getCurrentConversation()?.id
-          }
-        });
+        {
+          const panelId = (message as any).panelId;
+          const panelState = this._panelStates.get(panelId);
+          this.postMessage({
+            type: 'conversationHistory',
+            payload: {
+              conversations: this._conversationManager.getAllConversations(),
+              currentId: panelState?.currentConversationId
+            }
+          }, panelId);
+        }
         break;
 
       case 'switchConversation':
-        const switchId = (message.payload as { id: string }).id;
-        this._conversationManager.switchConversation(switchId);
-        const switchedConv = this._conversationManager.getCurrentConversation();
-        if (switchedConv) {
-          this.postMessage({
-            type: 'conversationChanged',
-            payload: switchedConv
-          });
+        {
+          const panelId = (message as any).panelId;
+          const switchId = (message.payload as { id: string }).id;
+          const panelState = this._panelStates.get(panelId);
+
+          if (panelState) {
+            // Update only this panel's conversation
+            panelState.currentConversationId = switchId;
+            const conversation = this._conversationManager.getConversation(switchId);
+            if (conversation) {
+              this._postToPanel(panelId, {
+                type: 'conversationChanged',
+                payload: conversation
+              });
+            }
+          }
         }
         break;
 
       case 'deleteConversation':
-        const deleteId = (message.payload as { id: string }).id;
-        this._conversationManager.deleteConversation(deleteId);
-        // Refresh history
-        this.postMessage({
-          type: 'conversationHistory',
-          payload: {
-            conversations: this._conversationManager.getAllConversations(),
-            currentId: this._conversationManager.getCurrentConversation()?.id
+        {
+          const panelId = (message as any).panelId;
+          const deleteId = (message.payload as { id: string }).id;
+          const panelState = this._panelStates.get(panelId);
+
+          this._conversationManager.deleteConversation(deleteId);
+
+          // If this panel was viewing the deleted conversation, create a new one
+          if (panelState?.currentConversationId === deleteId) {
+            const newConv = this._conversationManager.createNewConversation();
+            panelState.currentConversationId = newConv.id;
+            this._postToPanel(panelId, {
+              type: 'conversationChanged',
+              payload: newConv
+            });
           }
-        });
-        // If current was deleted, load the new current
-        const currentAfterDelete = this._conversationManager.getCurrentConversation();
-        if (currentAfterDelete) {
-          this.postMessage({
-            type: 'conversationChanged',
-            payload: currentAfterDelete
+
+          // Refresh history for the requesting panel
+          this._postToPanel(panelId, {
+            type: 'conversationHistory',
+            payload: {
+              conversations: this._conversationManager.getAllConversations(),
+              currentId: panelState?.currentConversationId
+            }
           });
         }
         break;
@@ -936,6 +990,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
    * Open Mysti in a new editor tab (detached panel)
    */
   public openInNewTab(): void {
+    const panelId = `panel_${Date.now()}`;
     const panel = vscode.window.createWebviewPanel(
       'mysti.detachedChat',
       'Mysti',
@@ -949,6 +1004,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     panel.webview.html = getWebviewContent(panel.webview, this._extensionUri);
 
+    // Create a new conversation for this panel
+    const newConversation = this._conversationManager.createNewConversation();
+
+    // Register panel state
+    this._panelStates.set(panelId, {
+      id: panelId,
+      webview: panel.webview,
+      panel: panel,
+      currentConversationId: newConversation.id,
+      isSidebar: false
+    });
+
     // Handle messages from detached panel
     panel.webview.onDidReceiveMessage(
       async (message: WebviewMessage) => {
@@ -956,48 +1023,48 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
     );
 
-    // Track panel for cleanup
-    this._detachedPanels.push(panel);
+    // Cleanup on dispose
     panel.onDidDispose(() => {
-      this._detachedPanels = this._detachedPanels.filter(p => p !== panel);
+      this._panelStates.delete(panelId);
     });
 
-    // Sync initial state to the new panel
-    this._syncStateToPanel(panel.webview);
+    // Send initial state with the new conversation
+    this._sendInitialState(panelId);
   }
 
   /**
-   * Sync current state to a specific webview (for newly opened panels)
+   * Send message to a specific panel
    */
-  private async _syncStateToPanel(webview: vscode.Webview) {
-    const config = vscode.workspace.getConfiguration('mysti');
-    const settings: Settings = {
-      mode: config.get('defaultMode', 'ask-before-edit'),
-      thinkingLevel: config.get('defaultThinkingLevel', 'medium'),
-      accessLevel: config.get('accessLevel', 'ask-permission'),
-      contextMode: config.get('autoContext', true) ? 'auto' : 'manual',
-      model: config.get('defaultModel', 'claude-sonnet-4-5-20250929'),
-      provider: config.get('defaultProvider', 'claude-code')
-    };
+  private _postToPanel(panelId: string, message: WebviewMessage) {
+    const state = this._panelStates.get(panelId);
+    state?.webview.postMessage(message);
+  }
 
-    webview.postMessage({
-      type: 'initialState',
-      payload: {
-        settings,
-        context: this._contextManager.getContext(),
-        conversation: this._conversationManager.getCurrentConversation(),
-        providers: this._providerManager.getProviders(),
-        slashCommands: this._getSlashCommands(),
-        quickActions: this._getQuickActions()
-      }
+  /**
+   * Broadcast message to all panels
+   */
+  private _broadcastToAll(message: WebviewMessage) {
+    this._panelStates.forEach(state => {
+      state.webview.postMessage(message);
     });
   }
 
-  public postMessage(message: WebviewMessage) {
-    this._view?.webview.postMessage(message);
-    // Broadcast to all detached panels
-    this._detachedPanels.forEach(panel => {
-      panel.webview.postMessage(message);
-    });
+  /**
+   * Smart message routing - broadcast global changes, target panel-specific
+   */
+  public postMessage(message: WebviewMessage, panelId?: string) {
+    // Types that should broadcast to all panels
+    const broadcastTypes = [
+      'settingsChanged',
+      'providerChanged',
+      'contextUpdated',
+      'conversationHistory'
+    ];
+
+    if (panelId && !broadcastTypes.includes(message.type)) {
+      this._postToPanel(panelId, message);
+    } else {
+      this._broadcastToAll(message);
+    }
   }
 }
