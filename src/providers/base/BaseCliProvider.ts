@@ -92,6 +92,14 @@ export abstract class BaseCliProvider implements ICliProvider {
   }
 
   /**
+   * Get stored usage stats from parsing (if any)
+   * Override in subclasses to provide usage from parsed stream events
+   */
+  getStoredUsage(): { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } | null {
+    return null;
+  }
+
+  /**
    * Send a message to the AI provider
    * @param panelId Optional panel ID for per-panel process tracking
    * @param providerManager Optional ProviderManager for registering process
@@ -150,7 +158,9 @@ export abstract class BaseCliProvider implements ICliProvider {
       // Process stream output
       yield* this.processStream(stderrOutput);
 
-      yield { type: 'done' };
+      // Yield final done with any stored usage from stream parsing
+      const storedUsage = this.getStoredUsage();
+      yield storedUsage ? { type: 'done', usage: storedUsage } : { type: 'done' };
     } catch (error) {
       yield this.handleError(error);
     } finally {

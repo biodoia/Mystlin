@@ -222,17 +222,10 @@ export class ClaudeCodeProvider extends BaseCliProvider {
           return null;
         }
 
-        // Handle message_stop - use cached usage from message_delta
+        // Handle message_stop - signal end of message
+        // Usage is already cached from message_delta, will be retrieved by getStoredUsage()
         if (nestedType === 'message_stop') {
-          const usage = this._lastUsageStats;
-          this._lastUsageStats = null; // Clear for next message
-          if (usage) {
-            return {
-              type: 'done',
-              usage
-            };
-          }
-          return { type: 'done' };
+          return null; // Don't return done here - let sendMessage handle it
         }
 
         return null;
@@ -327,6 +320,16 @@ export class ClaudeCodeProvider extends BaseCliProvider {
     }
 
     return null;
+  }
+
+  /**
+   * Get stored usage stats from the last message and clear them
+   * Called by sendMessage after stream processing to include in final done chunk
+   */
+  getStoredUsage(): { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } | null {
+    const usage = this._lastUsageStats;
+    this._lastUsageStats = null;
+    return usage;
   }
 
   /**

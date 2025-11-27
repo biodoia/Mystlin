@@ -42,6 +42,9 @@ export class CodexProvider extends BaseCliProvider {
   // Track completed tool calls to prevent duplicate tool_result emissions
   private _completedToolCalls: Set<string> = new Set();
 
+  // Usage stats from turn.completed
+  private _lastUsageStats: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number } | null = null;
+
   readonly config: ProviderConfig = {
     name: 'openai-codex',
     displayName: 'OpenAI Codex',
@@ -132,6 +135,15 @@ export class CodexProvider extends BaseCliProvider {
       isAuthenticated: hasConfig,
       configPath
     };
+  }
+
+  /**
+   * Get stored usage stats from turn.completed and clear them
+   */
+  getStoredUsage(): { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number } | null {
+    const usage = this._lastUsageStats;
+    this._lastUsageStats = null;
+    return usage;
   }
 
   async checkAuthentication(): Promise<boolean> {
@@ -258,7 +270,9 @@ export class CodexProvider extends BaseCliProvider {
       // Process stream output
       yield* this._processCodexStream();
 
-      yield { type: 'done' };
+      // Yield final done with any stored usage from stream parsing
+      const storedUsage = this.getStoredUsage();
+      yield storedUsage ? { type: 'done', usage: storedUsage } : { type: 'done' };
     } catch (error) {
       yield this.handleError(error);
     } finally {
@@ -400,20 +414,17 @@ export class CodexProvider extends BaseCliProvider {
           return null;
 
         case 'turn.completed':
-          // Turn completed - extract usage stats if available
+          // Turn completed - store usage stats for retrieval by getStoredUsage()
           const usage = event.usage || event.turn?.usage;
           if (usage) {
-            return {
-              type: 'done',
-              usage: {
-                input_tokens: usage.input_tokens || usage.prompt_tokens || 0,
-                output_tokens: usage.output_tokens || usage.completion_tokens || 0,
-                // Codex uses cached_input_tokens, map to cache_read_input_tokens
-                cache_read_input_tokens: usage.cached_input_tokens
-              }
+            this._lastUsageStats = {
+              input_tokens: usage.input_tokens || usage.prompt_tokens || 0,
+              output_tokens: usage.output_tokens || usage.completion_tokens || 0,
+              // Codex uses cached_input_tokens, map to cache_read_input_tokens
+              cache_read_input_tokens: usage.cached_input_tokens
             };
           }
-          return null;
+          return null; // Don't return done here - let sendMessage handle it
 
         case 'turn.failed':
           return { type: 'error', content: event.error || 'Turn failed' };
