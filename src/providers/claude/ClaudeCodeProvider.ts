@@ -57,6 +57,9 @@ export class ClaudeCodeProvider extends BaseCliProvider {
   // Tool call state tracking (Claude-specific)
   private _activeToolCalls: Map<number, { id: string; name: string; inputJson: string }> = new Map();
 
+  // Usage stats from message_delta (message_stop doesn't include usage)
+  private _lastUsageStats: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } | null = null;
+
   async discoverCli(): Promise<CliDiscoveryResult> {
     const extensionPath = this._findVSCodeExtensionCli();
     if (extensionPath) {
@@ -205,28 +208,31 @@ export class ClaudeCodeProvider extends BaseCliProvider {
           return null;
         }
 
-        // Handle message_delta - intermediate event, ignore
-        // Only message_stop should trigger completion
+        // Handle message_delta - capture usage stats (usage is in delta, not stop)
         if (nestedType === 'message_delta') {
-          return null;
-        }
-
-        // Handle message_stop - contains final usage stats
-        if (nestedType === 'message_stop') {
-          const message = nestedEvent.message || {};
-          const usage = message.usage || nestedEvent.usage;
+          const usage = nestedEvent.usage;
           if (usage) {
-            return {
-              type: 'done',
-              usage: {
-                input_tokens: usage.input_tokens || 0,
-                output_tokens: usage.output_tokens || 0,
-                cache_creation_input_tokens: usage.cache_creation_input_tokens,
-                cache_read_input_tokens: usage.cache_read_input_tokens
-              }
+            this._lastUsageStats = {
+              input_tokens: usage.input_tokens || 0,
+              output_tokens: usage.output_tokens || 0,
+              cache_creation_input_tokens: usage.cache_creation_input_tokens,
+              cache_read_input_tokens: usage.cache_read_input_tokens
             };
           }
           return null;
+        }
+
+        // Handle message_stop - use cached usage from message_delta
+        if (nestedType === 'message_stop') {
+          const usage = this._lastUsageStats;
+          this._lastUsageStats = null; // Clear for next message
+          if (usage) {
+            return {
+              type: 'done',
+              usage
+            };
+          }
+          return { type: 'done' };
         }
 
         return null;
