@@ -65,9 +65,11 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
       <div class="settings-section">
         <label class="settings-label">Mode</label>
         <select id="mode-select" class="select">
-          <option value="ask-before-edit">Ask before edit</option>
-          <option value="edit-automatically">Edit automatically</option>
-          <option value="plan">Plan</option>
+          <option value="default">Default</option>
+          <option value="ask-before-edit">Ask Before Edit</option>
+          <option value="edit-automatically">Edit Automatically</option>
+          <option value="quick-plan">Quick Plan</option>
+          <option value="detailed-plan">Detailed Plan</option>
         </select>
       </div>
       <div class="settings-section">
@@ -725,6 +727,33 @@ function getStyles(): string {
     .thinking-content {
       display: inline;
       vertical-align: middle;
+    }
+
+    /* Collapsible Claude thinking */
+    .thinking-block.collapsible {
+      cursor: pointer;
+    }
+    .thinking-block .thinking-preview {
+      display: inline;
+      vertical-align: middle;
+    }
+    .thinking-block .thinking-dots {
+      color: var(--vscode-descriptionForeground);
+      margin-left: 4px;
+      font-weight: bold;
+    }
+    .thinking-block .thinking-rest {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--vscode-widget-border);
+      white-space: pre-wrap;
+    }
+    .thinking-block.expanded .thinking-rest {
+      display: block;
+    }
+    .thinking-block.expanded .thinking-dots {
+      display: none;
     }
 
     /* Suggestions container - grid layout for cards */
@@ -4319,26 +4348,18 @@ function getScript(mermaidUri: string, logoUri: string): string {
       providerSelect.addEventListener('change', function() {
         var newProvider = providerSelect.value;
 
-        if (newProvider === 'brainstorm') {
-          // Enable brainstorm mode (same as agent menu brainstorm click)
-          state.activeAgent = 'brainstorm';
-          updateAgentMenuSelection();
-          // Notify backend - brainstorm is enabled via brainstorm.enabled setting
-          postMessageWithPanelId({ type: 'updateSettings', payload: { brainstormEnabled: true } });
-        } else {
-          // Regular provider selection
-          state.settings.provider = newProvider;
-          state.activeAgent = newProvider;
+        // Update state for all agent types including brainstorm
+        state.settings.provider = newProvider;
+        state.activeAgent = newProvider;
+        updateAgentMenuSelection();
 
-          // Update model dropdown with provider-specific models
+        if (newProvider !== 'brainstorm') {
+          // Update model dropdown with provider-specific models (brainstorm doesn't have its own models)
           updateModelsForProvider(newProvider);
-
-          // Sync with agent menu selection
-          updateAgentMenuSelection();
-
-          // Notify backend of provider change (also disables brainstorm)
-          postMessageWithPanelId({ type: 'updateSettings', payload: { provider: newProvider, brainstormEnabled: false } });
         }
+
+        // Notify backend of provider change
+        postMessageWithPanelId({ type: 'updateSettings', payload: { provider: newProvider } });
       });
 
       if (contextModeBtn && contextModeLabel) {
@@ -4352,7 +4373,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
       // Mode indicator click to cycle through modes
       if (modeIndicator) {
         modeIndicator.addEventListener('click', function() {
-          var modes = ['ask-before-edit', 'edit-automatically', 'plan'];
+          var modes = ['default', 'ask-before-edit', 'edit-automatically', 'quick-plan', 'detailed-plan'];
           var currentIndex = modes.indexOf(state.settings.mode);
           var nextIndex = (currentIndex + 1) % modes.length;
           var newMode = modes[nextIndex];
@@ -4409,31 +4430,23 @@ function getScript(mermaidUri: string, logoUri: string): string {
           item.addEventListener('click', function() {
             var agent = item.dataset.agent;
             if (agent) {
-              if (agent === 'brainstorm') {
-                // Enable brainstorm mode
-                state.activeAgent = 'brainstorm';
-                updateAgentMenuSelection();
-                agentMenu.classList.add('hidden');
-                // Sync settings dropdown
-                if (providerSelect) providerSelect.value = 'brainstorm';
-                // Notify backend
-                postMessageWithPanelId({ type: 'updateSettings', payload: { brainstormEnabled: true } });
-              } else {
-                // Select single agent, disable brainstorm
-                state.activeAgent = agent;
-                state.settings.provider = agent;
+              // Update state for all agent types including brainstorm
+              state.activeAgent = agent;
+              state.settings.provider = agent;
 
-                // Sync settings dropdown
-                if (providerSelect) providerSelect.value = agent;
+              // Sync settings dropdown
+              if (providerSelect) providerSelect.value = agent;
 
-                // Update models for the new provider
+              if (agent !== 'brainstorm') {
+                // Update models for the new provider (brainstorm doesn't have its own models)
                 updateModelsForProvider(agent);
-
-                updateAgentMenuSelection();
-                agentMenu.classList.add('hidden');
-                // Notify backend of provider change (also disables brainstorm)
-                postMessageWithPanelId({ type: 'updateSettings', payload: { provider: agent, brainstormEnabled: false } });
               }
+
+              updateAgentMenuSelection();
+              agentMenu.classList.add('hidden');
+
+              // Notify backend of provider change
+              postMessageWithPanelId({ type: 'updateSettings', payload: { provider: agent } });
             }
           });
         });
@@ -4738,6 +4751,8 @@ function getScript(mermaidUri: string, logoUri: string): string {
           case 'agentChanged':
             state.activeAgent = message.payload.agent;
             state.settings.provider = message.payload.agent;
+            // Sync provider dropdown
+            if (providerSelect) providerSelect.value = message.payload.agent;
             updateAgentMenuSelection();
             break;
           case 'modeChanged':
@@ -4817,12 +4832,63 @@ function getScript(mermaidUri: string, logoUri: string): string {
         if (!contentEl) return;
 
         if (chunkType === 'thinking') {
-          // Use same thinking block format as normal mode
-          var thinkingEl = document.createElement('div');
-          thinkingEl.className = 'thinking-block';
           var thinkingIcon = '<span class="thinking-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></span>';
-          thinkingEl.innerHTML = thinkingIcon + '<span class="thinking-content">' + escapeHtml(content) + '</span>';
-          contentEl.appendChild(thinkingEl);
+
+          // Codex sends complete thoughts - create separate blocks
+          if (agentId !== 'claude-code') {
+            var thinkingEl = document.createElement('div');
+            thinkingEl.className = 'thinking-block';
+            thinkingEl.innerHTML = thinkingIcon + '<span class="thinking-content">' + escapeHtml(content) + '</span>';
+            contentEl.appendChild(thinkingEl);
+          } else {
+            // Claude: Accumulate and create collapsible structure
+            brainstormClaudeThinkingBuffer += content;
+
+            var thinkingEl = contentEl.querySelector('.thinking-block.claude-thinking');
+            if (!thinkingEl) {
+              // Create the thinking block structure
+              thinkingEl = document.createElement('div');
+              thinkingEl.className = 'thinking-block claude-thinking';
+              thinkingEl.innerHTML = thinkingIcon +
+                '<span class="thinking-preview"></span>' +
+                '<span class="thinking-dots"></span>' +
+                '<div class="thinking-rest"></div>';
+              thinkingEl.onclick = function() {
+                thinkingEl.classList.toggle('expanded');
+              };
+              contentEl.appendChild(thinkingEl);
+            }
+
+            var previewSpan = thinkingEl.querySelector('.thinking-preview');
+            var dotsSpan = thinkingEl.querySelector('.thinking-dots');
+            var restDiv = thinkingEl.querySelector('.thinking-rest');
+
+            if (!brainstormFirstSentenceComplete) {
+              // Still building first sentence
+              var sentenceEnd = findFirstSentenceEnd(brainstormClaudeThinkingBuffer);
+              if (sentenceEnd !== -1) {
+                // First sentence complete!
+                brainstormFirstSentenceComplete = true;
+                var firstSentence = brainstormClaudeThinkingBuffer.substring(0, sentenceEnd).trim();
+                var rest = brainstormClaudeThinkingBuffer.substring(sentenceEnd).trim();
+
+                previewSpan.textContent = firstSentence;
+                dotsSpan.textContent = ' ...';
+                thinkingEl.classList.add('collapsible');
+                if (rest) {
+                  restDiv.textContent = rest;
+                }
+              } else {
+                // Still streaming first sentence
+                previewSpan.textContent = brainstormClaudeThinkingBuffer;
+              }
+            } else {
+              // First sentence done, update the rest section
+              var sentenceEnd = findFirstSentenceEnd(brainstormClaudeThinkingBuffer);
+              var rest = brainstormClaudeThinkingBuffer.substring(sentenceEnd).trim();
+              restDiv.textContent = rest;
+            }
+          }
         } else {
           // Accumulate text content
           if (!state.agentResponses[agentId]) {
@@ -4845,6 +4911,13 @@ function getScript(mermaidUri: string, logoUri: string): string {
 
       function handleBrainstormAgentComplete(payload) {
         var agentId = payload.agentId;
+
+        // Reset Claude thinking buffer and state
+        if (agentId === 'claude-code') {
+          brainstormClaudeThinkingBuffer = '';
+          brainstormFirstSentenceComplete = false;
+        }
+
         var statusEl = document.querySelector(
           '.brainstorm-agent-card[data-agent="' + agentId + '"] .brainstorm-agent-status'
         );
@@ -5004,7 +5077,8 @@ function getScript(mermaidUri: string, logoUri: string): string {
         }
         updateModeIndicator();
 
-        // Set provider dropdown
+        // Set agent based on provider setting
+        // Brainstorm is an agent type, not a mode - user selects it from the agent dropdown
         if (state.settings.provider) {
           providerSelect.value = state.settings.provider;
           state.activeAgent = state.settings.provider;
@@ -5121,6 +5195,17 @@ function getScript(mermaidUri: string, logoUri: string): string {
       var currentThinking = '';
       var contentSegmentIndex = 0;
       var pendingToolData = new Map(); // toolId -> { name, input } for edit report cards
+      var claudeThinkingBuffer = ''; // Buffer for Claude's streaming thinking chunks
+      var claudeFirstSentenceComplete = false; // Track if first sentence is done
+      var brainstormClaudeThinkingBuffer = ''; // Buffer for brainstorm mode Claude thinking
+      var brainstormFirstSentenceComplete = false; // Track if first sentence is done in brainstorm
+
+      // Helper to detect first sentence end
+      function findFirstSentenceEnd(text) {
+        // Match sentence-ending punctuation followed by space, newline, or end
+        var match = text.match(/[.!?](?:\s|$)/);
+        return match ? match.index + 1 : -1;
+      }
 
       function handleResponseChunk(chunk) {
         console.log('[Mysti Webview] Received chunk:', JSON.stringify(chunk));
@@ -5151,17 +5236,72 @@ function getScript(mermaidUri: string, logoUri: string): string {
       function appendThinkingBlock(thinking) {
         var streamingEl = getOrCreateStreamingMessage();
         var messageBody = streamingEl.querySelector('.message-body');
+        var thinkingIcon = '<span class="thinking-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></span>';
 
-        if (thinking) {
-          // Create a new thinking block for each thought
-          var thinkingEl = document.createElement('div');
-          thinkingEl.className = 'thinking-block';
-          // Use a thought bubble icon instead of text
-          var thinkingIcon = '<span class="thinking-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></span>';
-          thinkingEl.innerHTML = thinkingIcon + '<span class="thinking-content">' + escapeHtml(thinking) + '</span>';
-          messageBody.appendChild(thinkingEl);
+        if (thinking && messageBody) {
+          // Codex sends complete thoughts - create separate blocks
+          if (state.settings.provider === 'openai-codex') {
+            var thinkingEl = document.createElement('div');
+            thinkingEl.className = 'thinking-block';
+            thinkingEl.innerHTML = thinkingIcon + '<span class="thinking-content">' + escapeHtml(thinking) + '</span>';
+            messageBody.appendChild(thinkingEl);
+          } else {
+            // Claude: Accumulate and create collapsible structure
+            claudeThinkingBuffer += thinking;
+
+            var thinkingEl = messageBody.querySelector('.thinking-block.claude-thinking');
+            if (!thinkingEl) {
+              // Create the thinking block structure
+              thinkingEl = document.createElement('div');
+              thinkingEl.className = 'thinking-block claude-thinking';
+              thinkingEl.innerHTML = thinkingIcon +
+                '<span class="thinking-preview"></span>' +
+                '<span class="thinking-dots"></span>' +
+                '<div class="thinking-rest"></div>';
+              thinkingEl.onclick = function() {
+                thinkingEl.classList.toggle('expanded');
+              };
+              messageBody.appendChild(thinkingEl);
+            }
+
+            var previewSpan = thinkingEl.querySelector('.thinking-preview');
+            var dotsSpan = thinkingEl.querySelector('.thinking-dots');
+            var restDiv = thinkingEl.querySelector('.thinking-rest');
+
+            if (!claudeFirstSentenceComplete) {
+              // Still building first sentence
+              var sentenceEnd = findFirstSentenceEnd(claudeThinkingBuffer);
+              if (sentenceEnd !== -1) {
+                // First sentence complete!
+                claudeFirstSentenceComplete = true;
+                var firstSentence = claudeThinkingBuffer.substring(0, sentenceEnd).trim();
+                var rest = claudeThinkingBuffer.substring(sentenceEnd).trim();
+
+                previewSpan.textContent = firstSentence;
+                dotsSpan.textContent = ' ...';
+                thinkingEl.classList.add('collapsible');
+                if (rest) {
+                  restDiv.textContent = rest;
+                }
+              } else {
+                // Still streaming first sentence
+                previewSpan.textContent = claudeThinkingBuffer;
+              }
+            } else {
+              // First sentence done, update the rest section
+              var sentenceEnd = findFirstSentenceEnd(claudeThinkingBuffer);
+              var rest = claudeThinkingBuffer.substring(sentenceEnd).trim();
+              restDiv.textContent = rest;
+            }
+          }
         }
         messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function flushThinkingBuffer() {
+        // Reset the buffer and state - the thinking block stays as-is with its content
+        claudeThinkingBuffer = '';
+        claudeFirstSentenceComplete = false;
       }
 
       function updateCurrentContentSegment(content) {
@@ -5716,7 +5856,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
           '<div class="plan-option-actions">' +
             '<button class="plan-execute-btn edit-auto" data-mode="edit-automatically">Execute Automatically</button>' +
             '<button class="plan-execute-btn ask-first" data-mode="ask-before-edit">Ask Before Each Edit</button>' +
-            '<button class="plan-execute-btn keep-planning" data-mode="plan">Keep Planning</button>' +
+            '<button class="plan-execute-btn keep-planning" data-mode="quick-plan">Keep Planning</button>' +
           '</div>' +
           '<div class="plan-custom-instructions">' +
             '<button class="custom-instructions-toggle">Add custom instructions</button>' +
@@ -6127,6 +6267,8 @@ function getScript(mermaidUri: string, logoUri: string): string {
         currentResponse = '';
         currentThinking = '';
         contentSegmentIndex = 0;
+        claudeThinkingBuffer = ''; // Reset Claude thinking buffer
+        claudeFirstSentenceComplete = false;
         var loading = messagesEl.querySelector('.loading');
         if (loading) loading.remove();
       }
@@ -6183,6 +6325,15 @@ function getScript(mermaidUri: string, logoUri: string): string {
       function finalizeStreamingMessage(msg) {
         var streamingEl = messagesEl.querySelector('.message.streaming');
         if (streamingEl) {
+          // Reset the Claude thinking buffer
+          flushThinkingBuffer();
+
+          // Remove streaming class from thinking block
+          var streamingThinking = streamingEl.querySelector('.thinking-block.streaming-thinking');
+          if (streamingThinking) {
+            streamingThinking.classList.remove('streaming-thinking');
+          }
+
           streamingEl.classList.remove('streaming');
           streamingEl.dataset.id = msg.id;
 
@@ -6210,6 +6361,14 @@ function getScript(mermaidUri: string, logoUri: string): string {
       function clearMessages() {
         messagesEl.innerHTML = '<div class="welcome-container"><div class="welcome-header"><img src="' + LOGO_URI + '" alt="Mysti" class="welcome-logo" /><h2>Welcome to Mysti</h2><p>Your AI coding assistant. Choose an action or ask anything!</p></div><div class="welcome-suggestions" id="welcome-suggestions"></div></div>';
         renderWelcomeSuggestions();
+        // Reset all streaming buffers
+        currentResponse = '';
+        currentThinking = '';
+        contentSegmentIndex = 0;
+        claudeThinkingBuffer = '';
+        claudeFirstSentenceComplete = false;
+        brainstormClaudeThinkingBuffer = '';
+        brainstormFirstSentenceComplete = false;
       }
 
       function updateContext(context) {
@@ -6234,9 +6393,11 @@ function getScript(mermaidUri: string, logoUri: string): string {
 
       function updateModeIndicator() {
         var modeLabels = {
-          'ask-before-edit': 'Ask before edit',
-          'edit-automatically': 'Auto edit',
-          'plan': 'Plan mode'
+          'default': 'Default',
+          'ask-before-edit': 'Ask Before Edit',
+          'edit-automatically': 'Auto Edit',
+          'quick-plan': 'Quick Plan',
+          'detailed-plan': 'Detailed Plan'
         };
         modeIndicator.textContent = modeLabels[state.settings.mode] || state.settings.mode;
       }
