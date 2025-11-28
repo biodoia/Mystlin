@@ -40,7 +40,7 @@ export class PlanOptionManager {
   async detectPlanOptionsAsync(content: string): Promise<PlanDetectionResult> {
     const result = await this._classifier.classify(content);
     return {
-      hasPlanOptions: result.planOptions.length >= 2,
+      hasPlanOptions: result.planOptions.length >= 1,
       options: result.planOptions,
       context: result.context
     };
@@ -54,10 +54,10 @@ export class PlanOptionManager {
   }
 
   /**
-   * Check if classification result has plan options
+   * Check if classification result has plan options (allow 1+ options)
    */
   hasPlanOptions(result: ResponseClassification): boolean {
-    return result.planOptions.length >= 2;
+    return result.planOptions.length >= 1;
   }
 
   /**

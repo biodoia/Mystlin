@@ -19,65 +19,27 @@ const PLAN_ICONS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️
  */
 export class ResponseClassifier {
   private _claudePath: string;
-  private _warmProcess: ChildProcess | null = null;
   private _currentProcess: ChildProcess | null = null;
-  private _isSpawning: boolean = false;
 
   constructor() {
     this._claudePath = this._findClaudeCliPath();
-    this._spawnWarmProcess();
-    console.log('[Mysti] ResponseClassifier initialized');
-  }
-
-  /**
-   * Pre-spawn a Claude CLI process for fast response
-   */
-  private _spawnWarmProcess(): void {
-    if (this._isSpawning || this._warmProcess) {
-      return;
-    }
-
-    this._isSpawning = true;
-
-    try {
-      this._warmProcess = spawn(this._claudePath, [
-        '--print',
-        '--output-format', 'text',
-        '--model', 'claude-haiku-4-5-20251001'
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-
-      this._warmProcess.on('error', (err) => {
-        console.error('[Mysti] ResponseClassifier warm process error:', err);
-        this._warmProcess = null;
-        this._isSpawning = false;
-      });
-
-      this._warmProcess.on('close', (code) => {
-        if (code !== 0 && code !== null) {
-          console.log('[Mysti] ResponseClassifier warm process closed with code:', code);
-        }
-        this._warmProcess = null;
-        this._isSpawning = false;
-      });
-
-      this._isSpawning = false;
-      console.log('[Mysti] ResponseClassifier warm process spawned');
-    } catch (error) {
-      console.error('[Mysti] Failed to spawn ResponseClassifier warm process:', error);
-      this._isSpawning = false;
-    }
+    console.log('[Mysti] ResponseClassifier initialized with CLI path:', this._claudePath);
   }
 
   /**
    * Classify an AI response to identify questions and plan options
    */
   async classify(content: string): Promise<ResponseClassification> {
-    // Quick check: if content is too short or has no structure, skip
-    if (content.length < 100 || !this._hasStructuredContent(content)) {
+    console.log('[Mysti] ResponseClassifier: Content length:', content.length);
+
+    // Quick check: if content is very short, skip classification
+    if (content.length < 50) {
+      console.log('[Mysti] ResponseClassifier: Skipping - content too short (<50 chars)');
       return { questions: [], planOptions: [], context: content };
     }
+
+    // Let Claude decide if there are plans/questions - removed pattern check
+    console.log('[Mysti] ResponseClassifier: Calling Claude for classification');
 
     try {
       const result = await this._callClaude(content);
@@ -158,20 +120,12 @@ Classification Rules:
 Return ONLY the JSON object, nothing else.`;
 
     return new Promise((resolve) => {
-      let proc: ChildProcess | null = null;
-
-      if (this._warmProcess) {
-        proc = this._warmProcess;
-        this._warmProcess = null;
-        console.log('[Mysti] Using warm process for classification');
-      } else {
-        console.log('[Mysti] Spawning new process for classification');
-        proc = spawn(this._claudePath, [
-          '--print',
-          '--output-format', 'text',
-          '--model', 'claude-haiku-4-5-20251001'
-        ], { stdio: ['pipe', 'pipe', 'pipe'] });
-      }
+      console.log('[Mysti] Spawning process for classification');
+      const proc = spawn(this._claudePath, [
+        '--print',
+        '--output-format', 'text',
+        '--model', 'claude-haiku-4-5-20251001'
+      ], { stdio: ['pipe', 'pipe', 'pipe'] });
 
       this._currentProcess = proc;
 
@@ -189,17 +143,16 @@ Return ONLY the JSON object, nothing else.`;
         stderr += data.toString();
       });
 
-      // Timeout after 8 seconds
+      // Timeout after 15 seconds (increased from 8)
       const timeout = setTimeout(() => {
-        console.error('[Mysti] Classification timed out');
+        console.error('[Mysti] Classification timed out after 15s');
         proc?.kill('SIGTERM');
         resolve({ questions: [], planOptions: [], context: content });
-      }, 8000);
+      }, 15000);
 
       proc.on('close', (code) => {
         clearTimeout(timeout);
         this._currentProcess = null;
-        this._spawnWarmProcess();
 
         if (code === 0 && output.trim()) {
           try {
@@ -214,7 +167,7 @@ Return ONLY the JSON object, nothing else.`;
             console.error('[Mysti] Failed to parse classification:', e);
           }
         } else {
-          console.error('[Mysti] Classification failed - code:', code, 'stderr:', stderr);
+          console.error('[Mysti] Classification failed - code:', code, 'stderr:', stderr.substring(0, 200));
         }
 
         resolve({ questions: [], planOptions: [], context: content });
@@ -223,7 +176,6 @@ Return ONLY the JSON object, nothing else.`;
       proc.on('error', (err) => {
         clearTimeout(timeout);
         this._currentProcess = null;
-        this._spawnWarmProcess();
         console.error('[Mysti] Spawn error:', err);
         resolve({ questions: [], planOptions: [], context: content });
       });
@@ -259,9 +211,9 @@ Return ONLY the JSON object, nothing else.`;
         required: q.required !== false
       }));
 
-    // Validate and normalize plan options
+    // Validate and normalize plan options (removed approach length requirement)
     const planOptions: PlanOption[] = (parsed.planOptions || [])
-      .filter((p: any) => p.title && p.approach && p.approach.length > 50)
+      .filter((p: any) => p.title && p.approach)
       .map((p: any, i: number) => ({
         id: p.id || `plan${i + 1}`,
         title: String(p.title).substring(0, 60),
@@ -296,10 +248,6 @@ Return ONLY the JSON object, nothing else.`;
    */
   dispose(): void {
     this.cancel();
-    if (this._warmProcess) {
-      this._warmProcess.kill('SIGTERM');
-      this._warmProcess = null;
-    }
   }
 
   /**
