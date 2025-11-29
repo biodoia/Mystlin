@@ -10,7 +10,24 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
   const mermaidUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'mermaid.min.js'));
   const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'Mysti-Logo.png'));
 
-  const script = getScript(mermaidUri.toString(), logoUri.toString());
+  // Icon URIs for welcome suggestions and personas
+  const iconUris: Record<string, string> = {};
+  const iconNames = [
+    // Welcome suggestions
+    'magnifier', 'eye', 'brush', 'lab', 'lock', 'flash', 'notes', 'recycle', 'rocket', 'package', 'check', 'bug',
+    // Personas (additional)
+    'architecture', 'gear', 'target', 'microscope', 'hammer', 'chain', 'teacher', 'paint', 'globe', 'tools'
+  ];
+  for (const name of iconNames) {
+    iconUris[name] = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icons', `${name}.png`)).toString();
+  }
+
+  // Provider logos
+  const claudeLogoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'Claude.png')).toString();
+  const openaiLogoLightUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'openai.svg')).toString();
+  const openaiLogoDarkUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'openai_white.png')).toString();
+
+  const script = getScript(mermaidUri.toString(), logoUri.toString(), iconUris, claudeLogoUri, openaiLogoLightUri, openaiLogoDarkUri);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -175,7 +192,7 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
         </button>
         <div class="toolbar-spacer"></div>
         <button id="agent-select-btn" class="toolbar-btn agent-btn" title="Select AI agent">
-          <span id="agent-icon" class="agent-icon">🟣</span>
+          <span id="agent-icon" class="agent-icon"><img src="${claudeLogoUri}" alt="" /></span>
           <span id="agent-name">Claude</span>
           <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
             <path d="M4 6l4 4 4-4"/>
@@ -223,17 +240,17 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
     <div id="agent-menu" class="agent-menu hidden">
       <div class="agent-menu-header">Select Agent</div>
       <div class="agent-menu-item selected" data-agent="claude-code">
-        <span class="agent-item-dot" style="background: #8B5CF6;"></span>
+        <span class="agent-item-icon"><img src="${claudeLogoUri}" alt="" /></span>
         <span class="agent-item-name">Claude Code</span>
         <span class="agent-item-badge">Active</span>
       </div>
       <div class="agent-menu-item" data-agent="openai-codex">
-        <span class="agent-item-dot" style="background: #10B981;"></span>
+        <span class="agent-item-icon"><img class="openai-logo" src="${openaiLogoDarkUri}" alt="" /></span>
         <span class="agent-item-name">OpenAI Codex</span>
       </div>
       <div class="agent-menu-divider"></div>
       <div class="agent-menu-item" data-agent="brainstorm">
-        <span class="agent-item-dot" style="background: #F59E0B;"></span>
+        <span class="agent-item-icon"><img src="${logoUri}" alt="" /></span>
         <span class="agent-item-name">Brainstorm</span>
         <span class="agent-item-desc">Both agents collaborate</span>
       </div>
@@ -576,8 +593,8 @@ function getStyles(): string {
       flex-direction: column;
       align-items: center;
       padding: 8px 4px;
-      background: var(--vscode-button-secondaryBackground);
-      border: 1px solid transparent;
+      background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-input-border, transparent);
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -590,13 +607,23 @@ function getStyles(): string {
     }
 
     .persona-card.selected {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: #3b82f6;
+      background: var(--vscode-list-activeSelectionBackground);
+      border-color: var(--vscode-focusBorder);
     }
 
     .persona-card-icon {
-      font-size: 16px;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin-bottom: 4px;
+    }
+
+    .persona-card-icon img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
     }
 
     .persona-card-name {
@@ -608,7 +635,7 @@ function getStyles(): string {
     }
 
     .persona-card.selected .persona-card-name {
-      color: #3b82f6;
+      color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
     }
 
     /* Skills List */
@@ -623,7 +650,7 @@ function getStyles(): string {
       align-items: center;
       gap: 8px;
       padding: 6px 8px;
-      background: var(--vscode-button-secondaryBackground);
+      background: var(--vscode-input-background);
       border-radius: 4px;
       cursor: pointer;
       transition: background 0.15s ease;
@@ -634,7 +661,7 @@ function getStyles(): string {
     }
 
     .skill-item.active {
-      background: rgba(34, 197, 94, 0.12);
+      background: var(--vscode-list-activeSelectionBackground);
     }
 
     .skill-toggle {
@@ -661,8 +688,8 @@ function getStyles(): string {
     }
 
     .skill-item.active .skill-toggle {
-      background: #22c55e;
-      border-color: #22c55e;
+      background: var(--vscode-charts-green, #22c55e);
+      border-color: var(--vscode-charts-green, #22c55e);
     }
 
     .skill-item.active .skill-toggle::after {
@@ -677,7 +704,7 @@ function getStyles(): string {
     }
 
     .skill-item.active .skill-name {
-      color: #22c55e;
+      color: var(--vscode-charts-green, #22c55e);
       font-weight: 500;
     }
 
@@ -693,7 +720,7 @@ function getStyles(): string {
       right: 2px;
       width: 6px;
       height: 6px;
-      background: #3b82f6;
+      background: var(--vscode-charts-blue, #3b82f6);
       border-radius: 50%;
     }
 
@@ -722,8 +749,8 @@ function getStyles(): string {
     }
 
     .pill-btn {
-      background: var(--vscode-button-secondaryBackground);
-      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-input-background);
+      color: var(--vscode-foreground);
       border: none;
       padding: 2px 8px;
       border-radius: 10px;
@@ -732,7 +759,7 @@ function getStyles(): string {
     }
 
     .pill-btn:hover {
-      background: var(--vscode-button-secondaryHoverBackground);
+      background: var(--vscode-list-hoverBackground);
     }
 
     .context-items {
@@ -849,13 +876,16 @@ function getStyles(): string {
     .welcome-card-icon {
       width: 36px;
       height: 36px;
-      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
       margin-bottom: 8px;
-      background: var(--icon-bg, rgba(59,130,246,0.15));
+    }
+
+    .welcome-card-icon img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
     }
 
     .welcome-card-title {
@@ -872,15 +902,15 @@ function getStyles(): string {
     }
 
     /* Welcome card color variants */
-    .welcome-card[data-color="blue"] { --card-color: #3b82f6; --icon-bg: rgba(59,130,246,0.15); }
-    .welcome-card[data-color="green"] { --card-color: #22c55e; --icon-bg: rgba(34,197,94,0.15); }
-    .welcome-card[data-color="purple"] { --card-color: #a855f7; --icon-bg: rgba(168,85,247,0.15); }
-    .welcome-card[data-color="orange"] { --card-color: #f97316; --icon-bg: rgba(249,115,22,0.15); }
-    .welcome-card[data-color="indigo"] { --card-color: #6366f1; --icon-bg: rgba(99,102,241,0.15); }
-    .welcome-card[data-color="red"] { --card-color: #ef4444; --icon-bg: rgba(239,68,68,0.15); }
-    .welcome-card[data-color="teal"] { --card-color: #14b8a6; --icon-bg: rgba(20,184,166,0.15); }
-    .welcome-card[data-color="pink"] { --card-color: #ec4899; --icon-bg: rgba(236,72,153,0.15); }
-    .welcome-card[data-color="amber"] { --card-color: #f59e0b; --icon-bg: rgba(245,158,11,0.15); }
+    .welcome-card[data-color="blue"] { --card-color: #3b82f6; }
+    .welcome-card[data-color="green"] { --card-color: #22c55e; }
+    .welcome-card[data-color="purple"] { --card-color: #a855f7; }
+    .welcome-card[data-color="orange"] { --card-color: #f97316; }
+    .welcome-card[data-color="indigo"] { --card-color: #6366f1; }
+    .welcome-card[data-color="red"] { --card-color: #ef4444; }
+    .welcome-card[data-color="teal"] { --card-color: #14b8a6; }
+    .welcome-card[data-color="pink"] { --card-color: #ec4899; }
+    .welcome-card[data-color="amber"] { --card-color: #f59e0b; }
 
     .message {
       margin-bottom: 16px;
@@ -1152,8 +1182,8 @@ function getStyles(): string {
 
     /* Legacy quick action btn (keep for compatibility) */
     .quick-action-btn {
-      background: var(--vscode-button-secondaryBackground);
-      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-input-background);
+      color: var(--vscode-foreground);
       border: none;
       padding: 4px 12px;
       border-radius: 12px;
@@ -1163,7 +1193,7 @@ function getStyles(): string {
     }
 
     .quick-action-btn:hover {
-      background: var(--vscode-button-secondaryHoverBackground);
+      background: var(--vscode-list-hoverBackground);
     }
 
     .input-area {
@@ -1249,14 +1279,14 @@ function getStyles(): string {
       font-size: 11px;
       color: var(--vscode-descriptionForeground);
       padding: 4px 8px;
-      background: var(--vscode-button-secondaryBackground);
+      background: var(--vscode-input-background);
       border-radius: 6px;
       cursor: pointer;
       transition: background-color 0.15s ease;
     }
 
     .mode-indicator:hover {
-      background: var(--vscode-button-secondaryHoverBackground);
+      background: var(--vscode-list-hoverBackground);
     }
 
     .input-container {
@@ -1394,15 +1424,25 @@ function getStyles(): string {
       gap: 6px;
       padding: 4px 10px;
       border-radius: 6px;
-      background: var(--vscode-button-secondaryBackground);
+      background: var(--vscode-input-background);
     }
 
     .agent-btn:hover {
-      background: var(--vscode-button-secondaryHoverBackground);
+      background: var(--vscode-list-hoverBackground);
     }
 
     .agent-icon {
-      font-size: 12px;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .agent-icon img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
     }
 
     /* Context usage pie chart */
@@ -1411,14 +1451,14 @@ function getStyles(): string {
       align-items: center;
       gap: 4px;
       padding: 4px 8px;
-      background: var(--vscode-button-secondaryBackground);
+      background: var(--vscode-input-background);
       border-radius: 6px;
       font-size: 11px;
       color: var(--vscode-descriptionForeground);
     }
 
     .context-usage:hover {
-      background: var(--vscode-button-secondaryHoverBackground);
+      background: var(--vscode-list-hoverBackground);
     }
 
     .context-pie {
@@ -1490,16 +1530,21 @@ function getStyles(): string {
 
     .agent-menu-item.selected {
       background: var(--vscode-list-activeSelectionBackground);
-    }
-
-    .agent-item-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
+      color: var(--vscode-list-activeSelectionForeground);
     }
 
     .agent-item-icon {
-      font-size: 14px;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .agent-item-icon img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
     }
 
     .agent-item-name {
@@ -1520,7 +1565,7 @@ function getStyles(): string {
     }
 
     .agent-item-status.active {
-      color: #22c55e;
+      color: var(--vscode-charts-green, #22c55e);
     }
 
     .agent-item-desc {
@@ -1566,7 +1611,7 @@ function getStyles(): string {
     }
 
     .phase-indicator.pending {
-      background: var(--vscode-button-secondaryBackground);
+      background: var(--vscode-input-background);
       color: var(--vscode-descriptionForeground);
     }
 
@@ -1577,8 +1622,8 @@ function getStyles(): string {
     }
 
     .phase-indicator.complete {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22c55e;
+      background: color-mix(in srgb, var(--vscode-charts-green, #22c55e) 20%, transparent);
+      color: var(--vscode-charts-green, #22c55e);
     }
 
     .phase-connector {
@@ -1588,7 +1633,7 @@ function getStyles(): string {
     }
 
     .phase-connector.complete {
-      background: #22c55e;
+      background: var(--vscode-charts-green, #22c55e);
     }
 
     .agent-responses {
@@ -1667,7 +1712,7 @@ function getStyles(): string {
       align-items: center;
       gap: 8px;
       padding: 12px 16px;
-      background: rgba(0, 0, 0, 0.1);
+      background: var(--vscode-sideBarSectionHeader-background, var(--vscode-editor-background));
       font-weight: 600;
       font-size: 14px;
     }
@@ -1709,28 +1754,28 @@ function getStyles(): string {
       font-size: 11px;
       padding: 4px 10px;
       border-radius: 12px;
-      background: var(--vscode-button-secondaryBackground);
-      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-input-background);
+      color: var(--vscode-descriptionForeground);
     }
 
     .brainstorm-phase-indicator.individual {
-      background: rgba(59, 130, 246, 0.2);
-      color: #3b82f6;
+      background: color-mix(in srgb, var(--vscode-charts-blue, #3b82f6) 20%, transparent);
+      color: var(--vscode-charts-blue, #3b82f6);
     }
 
     .brainstorm-phase-indicator.discussion {
-      background: rgba(245, 158, 11, 0.2);
-      color: #f59e0b;
+      background: color-mix(in srgb, var(--vscode-charts-orange, #f59e0b) 20%, transparent);
+      color: var(--vscode-charts-orange, #f59e0b);
     }
 
     .brainstorm-phase-indicator.synthesis {
-      background: rgba(139, 92, 246, 0.2);
-      color: #8b5cf6;
+      background: color-mix(in srgb, var(--vscode-charts-purple, #8b5cf6) 20%, transparent);
+      color: var(--vscode-charts-purple, #8b5cf6);
     }
 
     .brainstorm-phase-indicator.complete {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22c55e;
+      background: color-mix(in srgb, var(--vscode-charts-green, #22c55e) 20%, transparent);
+      color: var(--vscode-charts-green, #22c55e);
     }
 
     .brainstorm-agents {
@@ -1787,14 +1832,14 @@ function getStyles(): string {
     }
 
     .brainstorm-agent-status.streaming {
-      background: rgba(59, 130, 246, 0.2);
-      color: #3b82f6;
+      background: color-mix(in srgb, var(--vscode-charts-blue, #3b82f6) 20%, transparent);
+      color: var(--vscode-charts-blue, #3b82f6);
       animation: pulse 1.5s infinite;
     }
 
     .brainstorm-agent-status.complete {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22c55e;
+      background: color-mix(in srgb, var(--vscode-charts-green, #22c55e) 20%, transparent);
+      color: var(--vscode-charts-green, #22c55e);
     }
 
     .brainstorm-agent-content {
@@ -1828,7 +1873,7 @@ function getStyles(): string {
       align-items: center;
       gap: 8px;
       padding: 12px 16px;
-      background: rgba(0, 0, 0, 0.1);
+      background: var(--vscode-sideBarSectionHeader-background, var(--vscode-editor-background));
       border-bottom: 1px solid var(--vscode-panel-border);
     }
 
@@ -2721,15 +2766,15 @@ function getStyles(): string {
     }
 
     /* Color variations for plan cards */
-    .plan-option-card[data-color="blue"] { border-left: 4px solid #3b82f6; }
-    .plan-option-card[data-color="green"] { border-left: 4px solid #22c55e; }
-    .plan-option-card[data-color="purple"] { border-left: 4px solid #a855f7; }
-    .plan-option-card[data-color="orange"] { border-left: 4px solid #f59e0b; }
-    .plan-option-card[data-color="indigo"] { border-left: 4px solid #6366f1; }
-    .plan-option-card[data-color="teal"] { border-left: 4px solid #14b8a6; }
-    .plan-option-card[data-color="red"] { border-left: 4px solid #ef4444; }
-    .plan-option-card[data-color="pink"] { border-left: 4px solid #ec4899; }
-    .plan-option-card[data-color="amber"] { border-left: 4px solid #f59e0b; }
+    .plan-option-card[data-color="blue"] { border-left: 4px solid var(--vscode-charts-blue, #3b82f6); }
+    .plan-option-card[data-color="green"] { border-left: 4px solid var(--vscode-charts-green, #22c55e); }
+    .plan-option-card[data-color="purple"] { border-left: 4px solid var(--vscode-charts-purple, #a855f7); }
+    .plan-option-card[data-color="orange"] { border-left: 4px solid var(--vscode-charts-orange, #f59e0b); }
+    .plan-option-card[data-color="indigo"] { border-left: 4px solid var(--vscode-charts-blue, #6366f1); }
+    .plan-option-card[data-color="teal"] { border-left: 4px solid var(--vscode-charts-green, #14b8a6); }
+    .plan-option-card[data-color="red"] { border-left: 4px solid var(--vscode-charts-red, #ef4444); }
+    .plan-option-card[data-color="pink"] { border-left: 4px solid var(--vscode-charts-red, #ec4899); }
+    .plan-option-card[data-color="amber"] { border-left: 4px solid var(--vscode-charts-yellow, #f59e0b); }
 
     /* ========================================
        Clarifying Question Input Cards
@@ -4013,12 +4058,29 @@ function getStyles(): string {
   `;
 }
 
-function getScript(mermaidUri: string, logoUri: string): string {
+function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string, string>, claudeLogoUri: string, openaiLogoLightUri: string, openaiLogoDarkUri: string): string {
   return `
     (function() {
       const vscode = acquireVsCodeApi();
       const MERMAID_URI = '${mermaidUri}';
       const LOGO_URI = '${logoUri}';
+      var ICON_URIS = ${JSON.stringify(iconUris)};
+      var CLAUDE_LOGO = '${claudeLogoUri}';
+      var OPENAI_LOGO_LIGHT = '${openaiLogoLightUri}';
+      var OPENAI_LOGO_DARK = '${openaiLogoDarkUri}';
+      var MYSTI_LOGO = '${logoUri}';
+
+      // Theme detection for OpenAI logo
+      function isDarkTheme() {
+        return document.body.classList.contains('vscode-dark') ||
+               document.body.classList.contains('vscode-high-contrast');
+      }
+
+      function getOpenAILogo() {
+        return isDarkTheme() ? OPENAI_LOGO_DARK : OPENAI_LOGO_LIGHT;
+      }
+
+      var OPENAI_LOGO = getOpenAILogo();
 
       // Mermaid lazy loading
       var mermaidLoaded = false;
@@ -4349,19 +4411,228 @@ function getScript(mermaidUri: string, logoUri: string): string {
 
       // Welcome screen suggestions
       var WELCOME_SUGGESTIONS = [
-        { id: 'understand', title: 'Understand Project', description: 'Analyze structure & architecture', message: 'Help me understand this project. Analyze the codebase structure, key files, technologies used, and how everything connects.', icon: '🔍', color: 'blue' },
-        { id: 'review', title: 'Code Review', description: 'Find issues & improvements', message: 'Review my code for potential issues, bugs, and suggest improvements for better quality and maintainability.', icon: '👀', color: 'purple' },
-        { id: 'cleanup', title: 'Clean Up', description: 'Remove dead code & organize', message: 'Help me clean up this codebase. Find dead code, unused imports, redundant files, and suggest organization improvements.', icon: '🧹', color: 'green' },
-        { id: 'tests', title: 'Write Tests', description: 'Add test coverage', message: 'Help me write tests for this project. Identify untested code and create comprehensive unit and integration tests.', icon: '🧪', color: 'teal' },
-        { id: 'security', title: 'Security Audit', description: 'Find vulnerabilities', message: 'Perform a security audit. Check for vulnerabilities, exposed secrets, injection risks, and OWASP top 10 issues.', icon: '🔒', color: 'red' },
-        { id: 'performance', title: 'Performance', description: 'Optimize for speed', message: 'Analyze performance bottlenecks and suggest optimizations for better speed and resource efficiency.', icon: '⚡', color: 'amber' },
-        { id: 'docs', title: 'Documentation', description: 'Improve docs & comments', message: 'Help me improve documentation. Add JSDoc comments, update README, and document complex logic.', icon: '📝', color: 'indigo' },
-        { id: 'refactor', title: 'Refactor', description: 'Improve code structure', message: 'Suggest refactoring opportunities. Identify code smells, duplicate code, and ways to improve architecture.', icon: '🔄', color: 'orange' },
-        { id: 'production', title: 'Production Ready', description: 'Prepare for deployment', message: 'Help make this project production-ready. Check error handling, logging, environment configs, and best practices.', icon: '🚀', color: 'green' },
-        { id: 'deploy', title: 'Prep Deployment', description: 'Set up CI/CD', message: 'Help me prepare for deployment. Set up CI/CD pipelines, Docker configs, and deployment scripts.', icon: '📦', color: 'purple' },
-        { id: 'compliance', title: 'Compliance', description: 'Check licensing & regs', message: 'Check for compliance issues. Review licenses, dependencies, accessibility, and regulatory requirements.', icon: '✅', color: 'blue' },
-        { id: 'debug', title: 'Debug Issue', description: 'Help diagnose problems', message: 'Help me debug an issue in my code. I will describe the problem and you help me find the root cause.', icon: '🐛', color: 'red' }
-      ];
+  {
+    "id": "understand",
+    "title": "Understand Project",
+    "description": "Analyze structure, patterns & conventions",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "/init"
+      },
+      {
+        "provider": "codex",
+        "message": "Analyze this codebase thoroughly. Map the directory structure, identify the tech stack and frameworks, understand the architecture patterns in use, locate entry points, and document key conventions. Summarize: project purpose, main components, data flow, dependencies, and any configuration patterns. Create a mental model I can reference for future tasks."
+      }
+    ],
+    "icon": "magnifier",
+    "color": "blue"
+  },
+  {
+    "id": "review",
+    "title": "Code Review",
+    "description": "Find bugs, anti-patterns & improvements",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Perform a comprehensive code review. Identify bugs, logic errors, anti-patterns, code smells, and potential edge cases. Suggest specific improvements for readability, maintainability, and adherence to best practices. Prioritize findings by severity and provide actionable fixes."
+      },
+      {
+        "provider": "codex",
+        "message": "Perform a comprehensive code review. Identify bugs, logic errors, anti-patterns, code smells, and potential edge cases. Suggest specific improvements for readability, maintainability, and adherence to best practices. Prioritize findings by severity (critical/high/medium/low) and provide actionable fixes with code examples."
+      }
+    ],
+    "icon": "eye",
+    "color": "purple"
+  },
+  {
+    "id": "cleanup",
+    "title": "Clean Up",
+    "description": "Remove dead code, reorganize files & enforce hygiene",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Deep clean this codebase. Find and remove: dead code, unused imports, orphaned files, redundant dependencies, commented-out code blocks, and empty or placeholder files. Reorganize file structure for clarity—group related modules, enforce consistent naming conventions, and suggest files to merge, split, or relocate. Clean up package.json/requirements.txt of unused dependencies. Provide a summary of all removals and reorganizations."
+      },
+      {
+        "provider": "codex",
+        "message": "Deep clean this codebase. Find and remove: dead code, unused imports, orphaned files, redundant dependencies, commented-out code blocks, and empty or placeholder files. Reorganize file structure for clarity—group related modules, enforce consistent naming conventions, and identify files to merge, split, or relocate. Clean up package.json/requirements.txt of unused dependencies. Execute the cleanup and provide a summary of all changes made."
+      }
+    ],
+    "icon": "brush",
+    "color": "green"
+  },
+  {
+    "id": "tests",
+    "title": "Write Tests",
+    "description": "Add comprehensive test coverage",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Analyze test coverage gaps and write tests. Identify critical untested paths, edge cases, and error conditions. Create unit tests for individual functions, integration tests for component interactions, and suggest e2e test scenarios. Follow existing test patterns and conventions. Prioritize tests by risk—focus on business-critical logic, data transformations, and error handling first."
+      },
+      {
+        "provider": "codex",
+        "message": "Analyze test coverage gaps and write tests. Identify critical untested paths, edge cases, and error conditions. Create unit tests for individual functions, integration tests for component interactions. Follow existing test patterns and conventions in this repo. Prioritize tests by risk—focus on business-critical logic, data transformations, and error handling first. Write and save the test files."
+      }
+    ],
+    "icon": "lab",
+    "color": "teal"
+  },
+  {
+    "id": "security",
+    "title": "Security Audit",
+    "description": "Find vulnerabilities, secrets & attack vectors",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Perform a thorough security audit. Check for: exposed secrets, API keys, and credentials in code or config files; injection vulnerabilities (SQL, XSS, command injection); insecure dependencies with known CVEs; authentication and authorization flaws; OWASP Top 10 issues; insecure data handling and storage; missing input validation and sanitization; improper error messages that leak information. Prioritize findings by severity (critical/high/medium/low) with specific remediation steps."
+      },
+      {
+        "provider": "codex",
+        "message": "Perform a thorough security audit. Check for: exposed secrets, API keys, and credentials in code or config files; injection vulnerabilities (SQL, XSS, command injection); insecure dependencies with known CVEs; authentication and authorization flaws; OWASP Top 10 issues; insecure data handling and storage; missing input validation and sanitization; improper error messages that leak information. Prioritize findings by severity (critical/high/medium/low) with specific remediation steps. Fix critical issues immediately."
+      }
+    ],
+    "icon": "lock",
+    "color": "red"
+  },
+  {
+    "id": "performance",
+    "title": "Performance",
+    "description": "Identify bottlenecks & optimize resources",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Analyze performance and identify optimization opportunities. Look for: N+1 queries and database inefficiencies; unnecessary re-renders or computations; missing caching opportunities; memory leaks and resource cleanup issues; blocking operations that should be async; large bundle sizes and lazy-loading candidates; inefficient algorithms and data structures; slow regex or string operations. Provide specific fixes with expected impact and any trade-offs."
+      },
+      {
+        "provider": "codex",
+        "message": "Analyze performance and identify optimization opportunities. Look for: N+1 queries and database inefficiencies; unnecessary re-renders or computations; missing caching opportunities; memory leaks and resource cleanup issues; blocking operations that should be async; large bundle sizes and lazy-loading candidates; inefficient algorithms and data structures; slow regex or string operations. Implement fixes and document expected impact and any trade-offs for each change."
+      }
+    ],
+    "icon": "flash",
+    "color": "amber"
+  },
+  {
+    "id": "docs",
+    "title": "Documentation",
+    "description": "Add docs, comments & usage examples",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Improve project documentation comprehensively. Add or update: JSDoc/docstrings for all public APIs with parameter types and return values; inline comments explaining complex or non-obvious logic; README with setup instructions, usage examples, and architecture overview; API documentation with request/response examples; environment variable documentation; contribution guidelines if missing. Focus on explaining 'why' not just 'what'."
+      },
+      {
+        "provider": "codex",
+        "message": "Improve project documentation comprehensively. Add or update: JSDoc/docstrings for all public APIs with parameter types and return values; inline comments explaining complex or non-obvious logic; README with setup instructions, usage examples, and architecture overview; API documentation with request/response examples; environment variable documentation; contribution guidelines if missing. Focus on explaining 'why' not just 'what'. Write all documentation files."
+      }
+    ],
+    "icon": "notes",
+    "color": "indigo"
+  },
+  {
+    "id": "refactor",
+    "title": "Refactor",
+    "description": "Improve architecture & eliminate code smells",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Identify refactoring opportunities to improve code quality. Find: code duplication that should be abstracted; overly complex functions that need decomposition; tight coupling that reduces testability; violated SOLID principles; mixed concerns that should be separated; inconsistent patterns across the codebase; magic numbers and hardcoded values; poor naming that obscures intent. Propose specific refactoring strategies with before/after examples. Prioritize by impact and risk."
+      },
+      {
+        "provider": "codex",
+        "message": "Identify and execute refactoring to improve code quality. Find and fix: code duplication that should be abstracted; overly complex functions that need decomposition; tight coupling that reduces testability; violated SOLID principles; mixed concerns that should be separated; inconsistent patterns across the codebase; magic numbers and hardcoded values; poor naming that obscures intent. Implement refactoring changes incrementally, committing after each logical improvement. Prioritize by impact and risk."
+      }
+    ],
+    "icon": "recycle",
+    "color": "orange"
+  },
+  {
+    "id": "production",
+    "title": "Production Ready",
+    "description": "Harden for reliability & operability",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Audit production readiness and harden the codebase. Check and improve: error handling—ensure all errors are caught, logged, and handled gracefully; logging—add structured logging for debugging and monitoring; environment configuration—separate configs for dev/staging/prod with proper secret management; health checks and readiness probes; graceful shutdown handling; rate limiting and request validation; retry logic with exponential backoff for external calls; database connection pooling and timeout handling; feature flags for safe rollouts. Create a checklist of items to address before deployment."
+      },
+      {
+        "provider": "codex",
+        "message": "Audit production readiness and harden the codebase. Check and improve: error handling—ensure all errors are caught, logged, and handled gracefully; logging—add structured logging for debugging and monitoring; environment configuration—separate configs for dev/staging/prod with proper secret management; health checks and readiness probes; graceful shutdown handling; rate limiting and request validation; retry logic with exponential backoff for external calls; database connection pooling and timeout handling. Implement missing production hardening. Create a PRODUCTION_CHECKLIST.md with status of each item."
+      }
+    ],
+    "icon": "rocket",
+    "color": "green"
+  },
+  {
+    "id": "deploy",
+    "title": "Prep Deployment",
+    "description": "Set up CI/CD, containers & infrastructure",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Prepare deployment infrastructure and automation. Set up or improve: CI/CD pipeline with build, test, lint, and deploy stages; Dockerfile with multi-stage builds, minimal base images, and security best practices; docker-compose for local development parity; environment-specific configuration management; automated testing gates before deployment; deployment scripts with rollback capability; infrastructure as code if applicable; secrets management integration; build caching for faster pipelines. Document the deployment process."
+      },
+      {
+        "provider": "codex",
+        "message": "Prepare deployment infrastructure and automation. Create or improve: CI/CD pipeline with build, test, lint, and deploy stages; Dockerfile with multi-stage builds, minimal base images, and security best practices; docker-compose for local development parity; environment-specific configuration management; automated testing gates before deployment; deployment scripts with rollback capability; build caching for faster pipelines. Write all configuration files and create a DEPLOYMENT.md with the complete deployment process."
+      }
+    ],
+    "icon": "package",
+    "color": "purple"
+  },
+  {
+    "id": "compliance",
+    "title": "Compliance",
+    "description": "Audit licenses, accessibility & regulations",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Perform a compliance audit across multiple dimensions. Check: dependency licenses for compatibility and legal requirements (GPL, MIT, Apache, etc.); license file presence and accuracy; accessibility compliance (WCAG 2.1 for web apps); data privacy requirements (GDPR, CCPA handling); audit logging for regulated industries; required security headers and policies; third-party data sharing and tracking disclosures; terms of service requirements for external APIs. Generate a compliance report with findings and required actions."
+      },
+      {
+        "provider": "codex",
+        "message": "Perform a compliance audit across multiple dimensions. Check: dependency licenses for compatibility and legal requirements (GPL, MIT, Apache, etc.); license file presence and accuracy; accessibility compliance (WCAG 2.1 for web apps); data privacy requirements (GDPR, CCPA handling); audit logging for regulated industries; required security headers and policies; third-party data sharing and tracking disclosures; terms of service requirements for external APIs. Generate a COMPLIANCE_REPORT.md with findings, severity, and required remediation actions."
+      }
+    ],
+    "icon": "check",
+    "color": "blue"
+  },
+  {
+    "id": "debug",
+    "title": "Debug Issue",
+    "description": "Diagnose root cause & trace execution",
+    "messages": [
+      {
+        "provider": "claude",
+        "message": "Help me systematically debug an issue. I will describe the problem—expected vs actual behavior, error messages, and steps to reproduce. Then help me: trace the execution path to isolate the failure point; identify potential root causes from most to least likely; suggest diagnostic steps (logging, breakpoints, test cases) to confirm the cause; propose fixes with explanation of why they address the root cause, not just symptoms; recommend preventive measures to avoid similar issues."
+      },
+      {
+        "provider": "codex",
+        "message": "Help me systematically debug an issue. I will describe the problem—expected vs actual behavior, error messages, and steps to reproduce. Then: trace the execution path to isolate the failure point; identify potential root causes from most to least likely; add diagnostic logging if needed to confirm the cause; implement the fix that addresses the root cause, not just symptoms; add a regression test to prevent recurrence; commit with a detailed explanation of the bug and fix."
+      }
+    ],
+    "icon": "bug",
+    "color": "red"
+  }
+];
+
+      // Helper to get provider-specific message from suggestion
+      function getProviderMessage(suggestion, currentProvider) {
+        // New format: messages array with provider-specific entries
+        if (suggestion.messages && Array.isArray(suggestion.messages)) {
+          var found = suggestion.messages.find(function(m) {
+            return m.provider === currentProvider ||
+                   (currentProvider === 'claude-code' && m.provider === 'claude') ||
+                   (currentProvider === 'openai-codex' && m.provider === 'codex');
+          });
+          if (found) return found.message;
+          // Fallback to first message if provider not found
+          return suggestion.messages[0] ? suggestion.messages[0].message : '';
+        }
+        // Backward compatibility: single message field
+        return suggestion.message || '';
+      }
 
       function renderWelcomeSuggestions() {
         var container = document.getElementById('welcome-suggestions');
@@ -4372,18 +4643,23 @@ function getScript(mermaidUri: string, logoUri: string): string {
           var card = document.createElement('button');
           card.className = 'welcome-card';
           card.setAttribute('data-color', s.color);
-          card.title = s.message;
+
+          // Get provider-specific message for tooltip
+          var providerMsg = getProviderMessage(s, state.settings.provider);
+          card.title = providerMsg;
 
           card.innerHTML =
-            '<div class="welcome-card-icon">' + s.icon + '</div>' +
+            '<div class="welcome-card-icon"><img src="' + ICON_URIS[s.icon] + '" alt="" /></div>' +
             '<div class="welcome-card-title">' + escapeHtml(s.title) + '</div>' +
             '<div class="welcome-card-desc">' + escapeHtml(s.description) + '</div>';
 
           card.onclick = function() {
+            // Get provider-specific message at click time (provider may have changed)
+            var message = getProviderMessage(s, state.settings.provider);
             postMessageWithPanelId({
               type: 'sendMessage',
               payload: {
-                content: s.message,
+                content: message,
                 context: state.context,
                 settings: state.settings
               }
@@ -4557,6 +4833,29 @@ function getScript(mermaidUri: string, logoUri: string): string {
         });
       }
 
+      // Map persona ID to icon key for ICON_URIS
+      function getPersonaIconKey(personaId) {
+        var mapping = {
+          'architect': 'architecture',
+          'prototyper': 'rocket',
+          'product-centric': 'package',
+          'refactorer': 'recycle',
+          'devops': 'gear',
+          'domain-expert': 'target',
+          'researcher': 'microscope',
+          'builder': 'hammer',
+          'debugger': 'bug',
+          'integrator': 'chain',
+          'mentor': 'teacher',
+          'designer': 'paint',
+          'fullstack': 'globe',
+          'security': 'lock',
+          'performance': 'flash',
+          'toolsmith': 'tools'
+        };
+        return mapping[personaId] || personaId;
+      }
+
       // Render agent config panel
       function renderAgentConfigPanel() {
         var personaGrid = document.getElementById('persona-grid');
@@ -4572,7 +4871,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
           card.dataset.persona = p.id;
           card.title = p.description;
           card.innerHTML =
-            '<span class="persona-card-icon">' + p.icon + '</span>' +
+            '<span class="persona-card-icon"><img src="' + ICON_URIS[getPersonaIconKey(p.id)] + '" alt="" /></span>' +
             '<span class="persona-card-name">' + escapeHtml(p.name) + '</span>';
 
           card.onclick = function() {
@@ -4649,7 +4948,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
 
         if (state.agentConfig.personaId) {
           var persona = state.availablePersonas.find(function(p) { return p.id === state.agentConfig.personaId; });
-          if (persona) parts.push(persona.icon + ' ' + persona.name);
+          if (persona) parts.push(persona.name);
         }
 
         if (state.agentConfig.enabledSkills.length > 0) {
@@ -4916,14 +5215,43 @@ function getScript(mermaidUri: string, logoUri: string): string {
           agentNameEl.textContent = agentName;
         }
         if (agentIconEl) {
-          agentIconEl.textContent = state.activeAgent === 'claude-code' ? '🟣' :
-                                   state.activeAgent === 'brainstorm' ? '🧠' : '🟢';
+          var img = agentIconEl.querySelector('img');
+          if (img) {
+            img.src = state.activeAgent === 'claude-code' ? CLAUDE_LOGO :
+                      state.activeAgent === 'brainstorm' ? MYSTI_LOGO : getOpenAILogo();
+          }
         }
         // Sync settings provider dropdown (only for actual providers, not brainstorm)
         if (providerSelect && state.activeAgent !== 'brainstorm' && providerSelect.value !== state.activeAgent) {
           providerSelect.value = state.activeAgent;
         }
       }
+
+      // Update all OpenAI logos based on current theme
+      function updateOpenAILogos() {
+        var logo = getOpenAILogo();
+        document.querySelectorAll('.openai-logo').forEach(function(img) {
+          img.src = logo;
+        });
+        // Also update toolbar icon if currently showing OpenAI
+        if (state.activeAgent === 'openai-codex') {
+          var agentIconEl = document.getElementById('agent-icon');
+          if (agentIconEl) {
+            var img = agentIconEl.querySelector('img');
+            if (img) img.src = logo;
+          }
+        }
+      }
+
+      // Watch for theme changes
+      var themeObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.attributeName === 'class') {
+            updateOpenAILogos();
+          }
+        });
+      });
+      themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
       var enhanceTimeout = null;
       enhanceBtn.addEventListener('click', function() {
@@ -5520,6 +5848,7 @@ function getScript(mermaidUri: string, logoUri: string): string {
 
         // Update agent menu to match settings
         updateAgentMenuSelection();
+        updateOpenAILogos();
 
         updateContext(state.context);
 

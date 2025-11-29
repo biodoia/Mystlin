@@ -352,7 +352,7 @@ export type DeveloperPersonaId =
   | 'debugger'
   | 'integrator'
   | 'mentor'
-  | 'process-engineer'
+  | 'designer'
   | 'fullstack'
   | 'security'
   | 'performance'

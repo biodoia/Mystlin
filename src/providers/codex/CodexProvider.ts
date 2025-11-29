@@ -173,6 +173,12 @@ export class CodexProvider extends BaseCliProvider {
     _settings: Settings,
     persona?: PersonaConfig
   ): string {
+    // Slash commands should be sent raw to the CLI without any modifications
+    // They are native CLI commands like /init, /compact, /help, etc.
+    if (content.trim().startsWith('/')) {
+      return content.trim();
+    }
+
     let fullPrompt = '';
 
     // Add persona instructions if provided (for brainstorm mode)

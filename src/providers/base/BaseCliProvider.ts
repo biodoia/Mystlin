@@ -304,6 +304,12 @@ export abstract class BaseCliProvider implements ICliProvider {
     persona?: PersonaConfig,
     agentConfig?: AgentConfiguration
   ): string {
+    // Slash commands should be sent raw to the CLI without any modifications
+    // They are native CLI commands like /init, /compact, /help, etc.
+    if (content.trim().startsWith('/')) {
+      return content.trim();
+    }
+
     let fullPrompt = '';
 
     // PRIORITY 1: Agent configuration (new system) takes precedence

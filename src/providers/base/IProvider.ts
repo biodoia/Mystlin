@@ -146,12 +146,12 @@ export const DEVELOPER_PERSONAS: Record<DeveloperPersonaId, DeveloperPersona> = 
     icon: '👨‍🏫',
     keyCharacteristics: `Prioritize onboarding, code reviews, knowledge sharing, and team alignment. Create comprehensive onboarding documentation. Commits include educational comments explaining "why". Review PRs with detailed, constructive feedback. Maintain coding standards and style guides. Create example implementations and templates. Document tribal knowledge and gotchas. Pair frequently with junior developers.`
   },
-  'process-engineer': {
-    id: 'process-engineer',
-    name: 'Process Engineer',
-    description: 'Creates structure so the team can deliver predictably and efficiently',
-    icon: '📋',
-    keyCharacteristics: `Champion planning, documentation, workflows, rituals, and metric-driven improvement. Create and maintain PR templates and checklists. Implement automated workflow enforcement. Commits follow strict conventional commit standards. Document team processes and rituals. Set up project boards and automation. Track and report on development metrics. Create runbooks for common procedures.`
+  designer: {
+    id: 'designer',
+    name: 'Designer',
+    description: 'Creates beautiful, accessible, and user-friendly interfaces',
+    icon: '🎨',
+    keyCharacteristics: `Focus on UI/UX design, visual aesthetics, and user experience. Create intuitive interfaces and maintain design consistency. Apply CSS best practices and responsive design principles. Ensure accessibility (a11y) compliance and WCAG guidelines. Build and maintain design systems and component libraries. Consider user flows, interactions, and micro-animations. Document design decisions and style guides. Review PRs for visual consistency and UX issues.`
   },
   fullstack: {
     id: 'fullstack',
@@ -221,8 +221,8 @@ export const DEVELOPER_SKILLS: Record<SkillId, Skill> = {
   'auto-compact': {
     id: 'auto-compact',
     name: 'Auto-Compact',
-    description: 'Summarizes and condenses context when switching tasks',
-    instructions: 'Summarize and condense context when switching features or when context grows stale.'
+    description: 'Runs /compact to condense context when needed',
+    instructions: 'When context grows large or after completing a significant task, run the /compact command to summarize and condense the conversation context.'
   },
   'dependency-aware': {
     id: 'dependency-aware',
