@@ -32,9 +32,10 @@
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🧠 Brainstorm Mode - AI Collaboration
+### Brainstorm Mode - AI Collaboration
+
 The standout feature. Enable brainstorm mode and watch **Claude Code** and **Codex** work together:
 
 1. **Both AIs analyze** your request independently
@@ -43,7 +44,8 @@ The standout feature. Enable brainstorm mode and watch **Claude Code** and **Cod
 
 > *"Two AI giants, one goal - the best code for you."*
 
-### 🎭 16 Developer Personas
+### 16 Developer Personas
+
 Shape how your AI thinks:
 
 | Persona | Focus |
@@ -56,7 +58,8 @@ Shape how your AI thinks:
 | **Refactorer** | Code quality, maintainability |
 | + 10 more... | Full-Stack, DevOps, Mentor, Designer... |
 
-### ⚡ 12 Toggleable Skills
+### 12 Toggleable Skills
+
 Mix and match behavioral modifiers:
 
 - **Concise** - Clear, brief communication
@@ -66,21 +69,25 @@ Mix and match behavioral modifiers:
 - **Scope Discipline** - Stay focused on the task
 - And 7 more...
 
-### 🎯 Smart Plan Selection
+### Smart Plan Selection
+
 When the AI presents multiple approaches:
+
 - Mysti **detects the options** automatically
 - You **choose your preferred** implementation
 - Select **execution mode** (ask-before-edit, auto-edit, plan-only)
 
-### 🔐 Permission Controls
+### Permission Controls
+
 Stay in control:
+
 - **Read-only** - AI can only read, never modify
 - **Ask-permission** - Approve each file change
 - **Full-access** - Let the AI work autonomously
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install a CLI Provider
 
@@ -93,18 +100,21 @@ npm install -g @anthropic-ai/claude-code
 ```
 
 ### 2. Open Mysti
+
 - Click the **Mysti icon** in the Activity Bar, or
 - Press `Ctrl+Shift+M` (`Cmd+Shift+M` on Mac)
 
 ### 3. Start Coding
+
 Type your request and let the AI team assist you!
 
 ### 4. Try Brainstorm Mode
+
 Enable it in settings to unlock multi-agent collaboration.
 
 ---
 
-## 🧠 Brainstorm Mode
+## Brainstorm Mode
 
 This is where Mysti shines. Instead of relying on one AI, get a **team of AI agents** working on your problem.
 
@@ -112,24 +122,26 @@ This is where Mysti shines. Instead of relying on one AI, get a **team of AI age
 
 ```
 Your Request
-     ↓
-┌─────────────┬─────────────┐
-│ Claude Code │   Codex     │
-│  analyzes   │  analyzes   │
-└──────┬──────┴──────┬──────┘
-       │             │
-       ▼             ▼
-┌─────────────────────────────┐
-│    Discussion (Full Mode)    │
-│  Agents review each other's  │
-│  solutions and debate        │
-└──────────────┬──────────────┘
-               ↓
-┌─────────────────────────────┐
-│        Synthesis            │
-│  Best ideas combined into   │
-│  one refined solution       │
-└─────────────────────────────┘
+     |
+     v
++-----------+-----------+
+|Claude Code|   Codex   |
+| analyzes  | analyzes  |
++-----+-----+-----+-----+
+      |           |
+      v           v
++---------------------------+
+|   Discussion (Full Mode)  |
+| Agents review each other's|
+| solutions and debate      |
++-----------+---------------+
+            |
+            v
++---------------------------+
+|        Synthesis          |
+| Best ideas combined into  |
+| one refined solution      |
++---------------------------+
 ```
 
 ### Two Modes
@@ -141,34 +153,40 @@ Your Request
 | Good for simple tasks | Best for complex problems |
 
 ### Enable Brainstorm
-Settings → `mysti.brainstorm.enabled: true`
+
+Settings > `mysti.brainstorm.enabled: true`
 
 ---
 
-## 🎭 Personas & Skills
+## Personas & Skills
 
 ### Using Personas
+
 1. Click the **persona indicator** in the toolbar
 2. Select from 16 specialized personas
 3. The AI adopts that mindset for your conversation
 
 ### Auto-Suggest
+
 Mysti can **automatically suggest** relevant personas based on your message:
-- Type "review this code" → Suggests **Refactorer**
-- Type "design a system" → Suggests **Architect**
-- Type "fix this bug" → Suggests **Debugger**
+
+- Type "review this code" > Suggests **Refactorer**
+- Type "design a system" > Suggests **Architect**
+- Type "fix this bug" > Suggests **Debugger**
 
 ### Combining with Skills
+
 Personas define *who* the AI is. Skills define *how* it works.
 
 **Example combo:**
+
 - Persona: **Architect**
 - Skills: **Concise** + **First Principles**
 - Result: An architect who explains design decisions clearly and from fundamentals
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Essential Settings
 
@@ -193,7 +211,7 @@ Personas define *who* the AI is. Skills define *how* it works.
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 | Action | Windows/Linux | Mac |
 |--------|---------------|-----|
@@ -202,7 +220,7 @@ Personas define *who* the AI is. Skills define *how* it works.
 
 ---
 
-## 📋 Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
@@ -214,9 +232,10 @@ Personas define *who* the AI is. Skills define *how* it works.
 
 ---
 
-## 📊 Telemetry
+## Telemetry
 
 Mysti collects **anonymous** usage data to improve the extension:
+
 - Feature usage patterns
 - Error rates
 - Provider preferences
@@ -224,11 +243,11 @@ Mysti collects **anonymous** usage data to improve the extension:
 **No code, file paths, or personal data is ever collected.**
 
 Respects VSCode's telemetry setting. Disable via:
-`Settings → Telemetry: Telemetry Level → off`
+Settings > Telemetry: Telemetry Level > off
 
 ---
 
-## 📄 License
+## License
 
 **Business Source License 1.1 (BSL 1.1)**
 
@@ -236,27 +255,11 @@ Respects VSCode's telemetry setting. Disable via:
 - **Commercial use** requires a separate license
 - Converts to **MIT License** on December 3, 2030
 
-Contact baha@deepmyst.com for commercial licensing.
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! See our [Architecture Guide](docs/ARCHITECTURE.md) for technical details.
-
-1. Fork the repository
-2. Create a feature branch
-3. Submit a Pull Request
+Contact [baha@deepmyst.com](mailto:baha@deepmyst.com) for commercial licensing.
 
 ---
 
 <p align="center">
   <strong>Mysti</strong> - Built by <a href="https://deepmyst.com">DeepMyst Inc</a><br>
   <sub>Made with Claude Code</sub>
-</p>
-
-<p align="center">
-  <a href="https://github.com/DeepMyst/Mysti">GitHub</a> •
-  <a href="https://deepmyst.com">Website</a> •
-  <a href="https://www.linkedin.com/company/deepmyst/">LinkedIn</a>
 </p>
