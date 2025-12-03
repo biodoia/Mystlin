@@ -5,37 +5,65 @@
 </p>
 
 <p align="center">
-  <strong>Your AI Coding Dream Team</strong><br>
-  <em>Claude Code + Codex collaborate in brainstorm mode, debate solutions, and synthesize the best approach for your code</em>
+  <strong>Your AI Coding Assistant for VSCode</strong><br>
+  <em>Use Claude Code, Codex, or both together in Brainstorm Mode</em>
 </p>
 
 <p align="center">
-  <a href="#-brainstorm-mode---two-ai-giants-one-solution">Brainstorm</a> •
+  <a href="#-choose-your-ai">Providers</a> •
+  <a href="#-brainstorm-mode">Brainstorm</a> •
   <a href="#-key-features">Features</a> •
-  <a href="#-requirements">Requirements</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#%EF%B8%8F-configuration">Config</a>
 </p>
 
 ---
 
-## Brainstorm Mode - Two AI Giants, One Solution
+## Choose Your AI
 
-**This is where Mysti shines.** Stop settling for one AI's opinion. With Brainstorm Mode, **Claude Code and OpenAI Codex work together** as a collaborative team to solve your coding problems.
+Mysti works with the AI coding tools you already have. **No extra subscriptions needed.**
 
 <p align="center">
-  <img src="docs/screenshots/plan-mode.png" alt="Brainstorm Mode in Action" width="700">
+  <img src="docs/screenshots/agent-selection.png" alt="Agent Selection" width="450">
 </p>
 
-### Why Two AIs Are Better Than One
+| Provider | Best For |
+|----------|----------|
+| **Claude Code** | Deep reasoning, complex refactoring, thorough analysis |
+| **Codex** | Quick iterations, familiar OpenAI style |
+| **Brainstorm Mode** | Both AIs collaborate and debate solutions |
+
+**Switch providers with one click. No lock-in.**
+
+---
+
+## See It In Action
+
+<p align="center">
+  <img src="docs/screenshots/user-experience.png" alt="Mysti Chat Interface" width="700">
+</p>
+
+<p align="center"><em>Beautiful, modern chat interface with syntax highlighting, markdown support, and mermaid diagrams</em></p>
+
+---
+
+## Brainstorm Mode
+
+**Want a second opinion?** Enable Brainstorm Mode and let Claude Code AND Codex tackle your problem together.
+
+<p align="center">
+  <img src="docs/screenshots/brainstorm-mode.png" alt="Brainstorm Mode" width="700">
+</p>
+
+### Why Two AIs Beat One
 
 **Claude Code** (Anthropic) and **Codex** (OpenAI) have different training, different strengths, and different blind spots. When they work together:
 
-- **Claude** might catch edge cases that Codex misses
-- **Codex** might suggest a more idiomatic approach Claude overlooked
+- **Claude** catches edge cases Codex might miss
+- **Codex** suggests approaches Claude might overlook
 - **Together** they debate, challenge each other, and synthesize the best solution
 
-It's like having a senior dev and a tech lead review your code simultaneously - except they actually talk to each other first.
+It's like having a senior dev and a tech lead review your code—except they actually discuss it first.
 
 ### How It Works
 
@@ -80,44 +108,11 @@ When the AI presents multiple implementation approaches, Mysti automatically det
   <img src="docs/screenshots/plan-suggestions.png" alt="Plan Suggestions" width="600">
 </p>
 
-**Requires both Claude Code and Codex CLIs installed.** See [Requirements](#-requirements).
-
----
-
-## Why Mysti?
-
-**Stop relying on a single AI.** Mysti lets you harness the power of multiple AI coding agents working as a team.
-
-| Single AI | Mysti's Team Approach |
-|-----------|----------------------|
-| One perspective | Multiple AI perspectives |
-| One solution | Debated, refined solutions |
-| Fixed behavior | 16 personas + 12 skills |
-| Take it or leave it | Choose your preferred approach |
-
----
-
-## See It In Action
-
-<p align="center">
-  <img src="docs/screenshots/user-experience.png" alt="Mysti Chat Interface" width="700">
-</p>
-
-<p align="center"><em>Beautiful, modern chat interface with syntax highlighting and markdown support</em></p>
+*Requires both Claude Code and Codex CLIs installed. See [Requirements](#-requirements).*
 
 ---
 
 ## Key Features
-
-### Multiple AI Providers
-
-Switch between Claude Code and Codex with a single click. Use whichever AI best fits your current task.
-
-<p align="center">
-  <img src="docs/screenshots/agent-selection.png" alt="Agent Selection" width="450">
-</p>
-
----
 
 ### 16 Developer Personas
 
@@ -191,24 +186,22 @@ Fine-tune every aspect of Mysti including token budgets, access levels, and brai
 
 ## Requirements
 
-**Mysti works with your existing AI subscriptions** - no additional costs!
+**Already paying for Claude or ChatGPT? You're ready to go.**
 
-You need at least one of these CLI tools installed:
+Mysti works with your existing subscriptions—no additional costs!
 
 | CLI Tool | Subscription | Install |
 |----------|--------------|---------|
 | **Claude Code** (recommended) | Anthropic API or Claude Pro/Max | `npm install -g @anthropic-ai/claude-code` |
 | **Codex CLI** | OpenAI API | Follow OpenAI's installation guide |
 
-**Already paying for Claude or ChatGPT?** You're ready to go! Mysti leverages your existing subscriptions through the official CLI tools.
-
-For **Brainstorm Mode** (multi-agent collaboration), install **both** CLIs to get two AI giants working together.
+You only need **one** CLI to get started. Install **both** to unlock Brainstorm Mode.
 
 ---
 
 ## Quick Start
 
-### 1. Install CLI Tools
+### 1. Install a CLI Tool
 
 ```bash
 # Claude Code (recommended)
@@ -227,7 +220,7 @@ For Brainstorm Mode, also install Codex CLI.
 
 ### 3. Start Coding
 
-Type your request and let the AI team assist you!
+Type your request and let the AI assist you!
 
 ---
 

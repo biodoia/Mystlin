@@ -1,8 +1,8 @@
 {
   "name": "mysti",
   "displayName": "Mysti - AI Coding Agent",
-  "description": "Your AI coding dream team. Claude Code and Codex collaborate in brainstorm mode, debate solutions, and synthesize the best approach for your code.",
-  "version": "0.1.2",
+  "description": "Multi-agent AI coding assistant. Claude Code + Codex brainstorm together, debate approaches, and deliver superior solutions. Like Cursor & Copilot, but with collaborative AI agents.",
+  "version": "0.1.13",
   "publisher": "DeepMyst",
   "author": {
     "name": "Baha Abunojaim",
@@ -26,21 +26,27 @@
     "vscode": "^1.85.0"
   },
   "categories": [
+    "AI",
     "Programming Languages",
     "Machine Learning",
-    "Chat",
-    "Other"
+    "Chat"
   ],
   "keywords": [
     "ai",
-    "agent",
     "claude",
-    "coding",
+    "claude code",
     "copilot",
-    "assistant",
+    "cursor",
+    "gpt",
+    "codex",
+    "ai agent",
+    "ai chat",
+    "code assistant",
+    "pair programming",
     "anthropic",
     "openai",
-    "codex"
+    "multi-agent",
+    "brainstorm"
   ],
   "license": "BUSL-1.1",
   "activationEvents": [
