@@ -13,9 +13,14 @@ npm run compile      # Production build (webpack)
 npm run watch        # Development build with watch mode
 npm run lint         # ESLint check
 npm run test         # Run tests
+npx vsce package     # Package extension as .vsix
 ```
 
 Output: `dist/extension.js` from entry point `src/extension.ts`
+
+## Development
+
+Press `F5` in VSCode to launch Extension Development Host for debugging. Set breakpoints in TypeScript files and filter Debug Console with `[Mysti]` for extension logs.
 
 ## Architecture
 
@@ -25,14 +30,17 @@ Output: `dist/extension.js` from entry point `src/extension.ts`
 extension.ts (entry)
     │
     ├── Managers (business logic)
-    │   ├── ContextManager      - File/selection tracking
-    │   ├── ConversationManager - Message persistence via globalState
-    │   ├── ProviderManager     - Provider registry facade
-    │   ├── PermissionManager   - Access control
-    │   ├── BrainstormManager   - Multi-agent orchestration
-    │   ├── ResponseClassifier  - AI-powered response analysis
-    │   ├── PlanOptionManager   - Implementation plan extraction
-    │   └── SuggestionManager   - Quick action suggestions
+    │   ├── ContextManager        - File/selection tracking
+    │   ├── ConversationManager   - Message persistence via globalState
+    │   ├── ProviderManager       - Provider registry facade
+    │   ├── PermissionManager     - Access control
+    │   ├── BrainstormManager     - Multi-agent orchestration
+    │   ├── ResponseClassifier    - AI-powered response analysis
+    │   ├── PlanOptionManager     - Implementation plan extraction
+    │   ├── SuggestionManager     - Quick action suggestions
+    │   ├── SetupManager          - CLI auto-setup & authentication
+    │   ├── AgentLoader           - Three-tier agent loading from markdown
+    │   └── AgentContextManager   - Recommendations & prompt building
     │
     └── ChatViewProvider (UI coordinator)
             │
@@ -85,3 +93,89 @@ extension.ts (entry)
 - Prism.js for syntax highlighting
 - Mermaid.js for diagrams
 - Resources loaded from `resources/` folder
+
+## Extension Points
+
+### Adding a New Provider
+
+1. Create class extending `BaseCliProvider` in `src/providers/newprovider/`
+2. Implement abstract methods: `discoverCli()`, `getCliPath()`, `buildCliArgs()`, `parseStreamLine()`, `getThinkingTokens()`
+3. Register in `src/providers/ProviderRegistry.ts`
+4. Add to `ProviderType` union in `src/types.ts`
+5. Add configuration options in `package.json`
+
+### Adding a New Persona (Markdown-based)
+
+Create a markdown file in one of the agent source directories:
+
+1. **Core**: `resources/agents/core/personas/my-persona.md`
+2. **User**: `~/.mysti/agents/personas/my-persona.md`
+3. **Workspace**: `.mysti/agents/personas/my-persona.md`
+
+**Markdown format:**
+
+```markdown
+---
+id: my-persona
+name: My Persona
+description: Brief description for UI display
+icon: 🎯
+category: general
+activationTriggers:
+  - keyword1
+  - keyword2
+---
+
+## Key Characteristics
+
+Main instructions for the AI...
+
+## Priorities
+
+1. First priority
+2. Second priority
+
+## Best Practices
+
+- Practice one
+- Practice two
+
+## Anti-Patterns to Avoid
+
+- Avoid this
+- Avoid that
+```
+
+### Adding a New Skill (Markdown-based)
+
+Create a markdown file in one of the agent source directories:
+
+1. **Core**: `resources/agents/core/skills/my-skill.md`
+2. **User**: `~/.mysti/agents/skills/my-skill.md`
+3. **Workspace**: `.mysti/agents/skills/my-skill.md`
+
+**Markdown format:**
+
+```markdown
+---
+id: my-skill
+name: My Skill
+description: Brief description
+icon: ⚡
+category: workflow
+activationTriggers:
+  - trigger1
+---
+
+## Instructions
+
+Detailed instructions for the AI when this skill is enabled...
+```
+
+### Legacy: Static Personas/Skills (Fallback)
+
+For backward compatibility, static definitions still exist:
+
+1. Add ID to `DeveloperPersonaId` in `src/types.ts`
+2. Define persona in `DEVELOPER_PERSONAS` record in `src/providers/base/IProvider.ts`
+3. Add icon to `resources/icons/`

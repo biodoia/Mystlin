@@ -1,23 +1,46 @@
 {
   "name": "mysti",
-  "displayName": "Mysti - AI Coding Assistant",
-  "description": "A powerful AI coding assistant interface supporting multiple AI backends including Claude Code CLI",
+  "displayName": "Mysti - AI Coding Agent",
+  "description": "A powerful AI coding agent interface supporting multiple AI backends including Claude Code CLI",
   "version": "0.1.0",
-  "publisher": "mysti",
+  "publisher": "DeepMyst",
+  "author": {
+    "name": "Baha Abunojaim",
+    "email": "baha@deepmyst.com",
+    "url": "https://deepmyst.com"
+  },
+  "icon": "resources/Mysti-Logo.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DeepMyst/Mysti"
+  },
+  "bugs": {
+    "url": "https://github.com/DeepMyst/Mysti/issues"
+  },
+  "homepage": "https://deepmyst.com",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Programming Languages",
     "Machine Learning",
+    "Chat",
     "Other"
   ],
   "keywords": [
     "ai",
-    "assistant",
+    "agent",
     "claude",
     "coding",
-    "copilot"
+    "copilot",
+    "assistant",
+    "anthropic",
+    "openai",
+    "codex"
   ],
   "license": "BUSL-1.1",
   "activationEvents": [
@@ -72,6 +95,16 @@
           "light": "resources/Mysti-Logo.png",
           "dark": "resources/Mysti-Logo.png"
         }
+      },
+      {
+        "command": "mysti.debugSetup",
+        "title": "Debug: Test Setup Flow",
+        "category": "Mysti"
+      },
+      {
+        "command": "mysti.debugSetupFailure",
+        "title": "Debug: Test Setup Failure",
+        "category": "Mysti"
       }
     ],
     "menus": {
@@ -258,6 +291,18 @@
           "default": "",
           "description": "Custom persona prompt for Codex (when persona is 'custom')"
         },
+        "mysti.agents.autoSuggest": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically suggest personas based on your message content"
+        },
+        "mysti.agents.maxTokenBudget": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 16000,
+          "description": "Maximum tokens for agent context (0 = unlimited, disabled by default)"
+        },
         "mysti.permission.timeout": {
           "type": "number",
           "default": 30,
@@ -299,7 +344,9 @@
     "compile": "webpack --mode production",
     "watch": "webpack --mode development --watch",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "sync-agents": "node scripts/sync-agents.js",
+    "sync-agents:force": "node scripts/sync-agents.js --force"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -314,6 +361,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@vscode/extension-telemetry": "^0.9.0",
     "marked": "^15.0.0",
     "prismjs": "^1.29.0",
     "uuid": "^9.0.1"

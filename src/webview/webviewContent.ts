@@ -1,6 +1,19 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import * as vscode from 'vscode';
 
-export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri, version: string = '0.0.0'): string {
   const nonce = getNonce();
   const styles = getStyles();
 
@@ -27,7 +40,7 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
   const openaiLogoLightUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'openai.svg')).toString();
   const openaiLogoDarkUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'openai_white.png')).toString();
 
-  const script = getScript(mermaidUri.toString(), logoUri.toString(), iconUris, claudeLogoUri, openaiLogoLightUri, openaiLogoDarkUri);
+  const script = getScript(mermaidUri.toString(), logoUri.toString(), iconUris, claudeLogoUri, openaiLogoLightUri, openaiLogoDarkUri, version);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -72,6 +85,13 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
             <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+          </svg>
+        </button>
+        <button id="about-btn" class="icon-btn" title="About Mysti">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588z"/>
+            <circle cx="8" cy="4.5" r="1"/>
           </svg>
         </button>
         <button id="settings-btn" class="icon-btn" title="Settings">
@@ -125,6 +145,88 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
           <option value="full-access">Full access</option>
         </select>
       </div>
+      <div class="settings-divider"></div>
+      <div class="settings-section-title">Agent Settings</div>
+      <div class="settings-section">
+        <label class="settings-label">Auto-Suggest Personas</label>
+        <div class="settings-toggle-row">
+          <div id="auto-suggest-toggle" class="settings-toggle">
+            <div class="settings-toggle-knob"></div>
+          </div>
+          <span class="settings-toggle-label">Suggest based on message</span>
+        </div>
+      </div>
+      <div class="settings-section">
+        <label class="settings-label">Limit Agent Tokens</label>
+        <div class="settings-toggle-row">
+          <div id="token-limit-toggle" class="settings-toggle">
+            <div class="settings-toggle-knob"></div>
+          </div>
+          <span class="settings-toggle-label">Enable token limit</span>
+        </div>
+      </div>
+      <div class="settings-section" id="token-budget-section">
+        <label class="settings-label">Token Budget</label>
+        <div class="token-budget-input-row">
+          <input type="number" id="token-budget-input" class="input"
+                 min="100" max="16000" step="100" value="2000" />
+          <span class="token-budget-suffix">tokens</span>
+        </div>
+        <div class="token-budget-hint">Recommended: 1000-4000</div>
+      </div>
+    </div>
+
+    <!-- About panel (hidden by default) -->
+    <div id="about-panel" class="about-panel hidden">
+      <div class="about-header">
+        <img src="${logoUri}" alt="Mysti Logo" class="about-logo" />
+        <div class="about-title">
+          <h2>Mysti</h2>
+          <span class="about-version">v${version}</span>
+        </div>
+      </div>
+      <p class="about-tagline">Your AI Coding Agent</p>
+      <p class="about-description">
+        A powerful AI coding agent for VSCode supporting multiple backends.
+        Mysti can analyze code, execute tasks, and collaborate with you on complex projects.
+      </p>
+      <div class="about-section">
+        <h3>Created by</h3>
+        <p>DeepMyst Inc.</p>
+        <p class="about-author">Baha Abunojaim</p>
+      </div>
+      <div class="about-links">
+        <a href="https://deepmyst.com" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4H7.5V1.077zM4.09 4a9.267 9.267 0 0 1 .64-1.539 6.7 6.7 0 0 1 .597-.933A7.025 7.025 0 0 0 2.255 4H4.09zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a6.958 6.958 0 0 0-.656 2.5h2.49zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5H4.847zM8.5 5v2.5h2.99a12.495 12.495 0 0 0-.337-2.5H8.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5H4.51zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5H8.5zM5.145 12c.138.386.295.744.468 1.068.552 1.035 1.218 1.65 1.887 1.855V12H5.145zm.182 2.472a6.696 6.696 0 0 1-.597-.933A9.268 9.268 0 0 1 4.09 12H2.255a7.024 7.024 0 0 0 3.072 2.472zM3.82 11a13.652 13.652 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5H3.82zm6.853 3.472A7.024 7.024 0 0 0 13.745 12H11.91a9.27 9.27 0 0 1-.64 1.539 6.688 6.688 0 0 1-.597.933zM8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855.173-.324.33-.682.468-1.068H8.5zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.65 13.65 0 0 1-.312 2.5zm2.802-3.5a6.959 6.959 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5h2.49zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7.024 7.024 0 0 0-3.072-2.472c.218.284.418.598.597.933zM10.855 4a7.966 7.966 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4h2.355z"/>
+          </svg>
+          Website
+        </a>
+        <a href="https://github.com/DeepMyst/Mysti" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="https://www.linkedin.com/company/deepmyst/" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
+          </svg>
+          LinkedIn
+        </a>
+      </div>
+      <div class="about-section">
+        <h3>License</h3>
+        <p>Business Source License 1.1</p>
+      </div>
+      <div class="about-section about-credits">
+        <h3>Third-party Libraries</h3>
+        <ul class="credits-list">
+          <li>Marked.js - Markdown parsing</li>
+          <li>Prism.js - Syntax highlighting</li>
+          <li>Mermaid.js - Diagram rendering</li>
+        </ul>
+      </div>
     </div>
 
     <!-- Agent Configuration panel (hidden by default) -->
@@ -165,7 +267,7 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
         <div class="welcome-header">
           <img src="${logoUri}" alt="Mysti" class="welcome-logo" />
           <h2>Welcome to Mysti</h2>
-          <p>Your AI coding assistant. Choose an action or ask anything!</p>
+          <p>Your AI coding agent. Choose an action or ask anything!</p>
         </div>
         <div class="welcome-suggestions" id="welcome-suggestions"></div>
       </div>
@@ -174,6 +276,26 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
     <!-- Quick actions (dynamically populated) -->
     <div id="quick-actions" class="quick-actions">
       <!-- Suggestions will be dynamically generated after each response -->
+    </div>
+
+    <!-- Inline suggestions widget (compact, above input) -->
+    <div id="inline-suggestions" class="inline-suggestions hidden">
+      <div class="inline-suggestions-content">
+        <div class="inline-suggestions-chips" id="inline-suggestions-chips">
+          <!-- Dynamically populated with recommendation chips -->
+        </div>
+        <div class="inline-suggestions-actions">
+          <label class="inline-suggestions-toggle">
+            <input type="checkbox" id="inline-auto-suggest-check" />
+            <span class="inline-toggle-text">Auto-suggest</span>
+          </label>
+          <button class="inline-suggestions-dismiss" id="inline-suggestions-dismiss" title="Dismiss">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Input area -->
@@ -205,6 +327,13 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
           </svg>
           <span id="context-usage-text" class="context-usage-text">0%</span>
         </div>
+        <button id="toolbar-persona-btn" class="toolbar-btn persona-indicator-btn" title="Click to select a persona">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+            <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+          </svg>
+          <span id="toolbar-persona-name">No persona</span>
+        </button>
         <span id="mode-indicator" class="mode-indicator">Ask before edit</span>
       </div>
       <div class="input-container">
@@ -253,6 +382,28 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
         <span class="agent-item-icon"><img src="${logoUri}" alt="" /></span>
         <span class="agent-item-name">Brainstorm</span>
         <span class="agent-item-desc">Both agents collaborate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup Overlay -->
+  <div id="setup-overlay" class="setup-overlay hidden">
+    <div class="setup-content">
+      <div class="setup-progress">
+        <img src="${logoUri}" alt="Mysti" class="setup-logo" />
+        <div class="setup-step">Setting up Mysti...</div>
+        <div class="setup-progress-track">
+          <div class="setup-progress-bar" style="width: 0%"></div>
+        </div>
+        <div class="setup-message">Checking CLI installation...</div>
+      </div>
+      <div class="setup-error hidden">
+        <div class="setup-error-icon">⚠️</div>
+        <div class="setup-error-message"></div>
+        <div class="setup-buttons">
+          <button class="setup-btn primary" onclick="postMessageWithPanelId({ type: 'retrySetup', payload: { providerId: state.setup.providerId } })">Retry</button>
+          <button class="setup-btn secondary" onclick="postMessageWithPanelId({ type: 'skipSetup' })">Skip</button>
+        </div>
       </div>
     </div>
   </div>
@@ -498,6 +649,385 @@ function getStyles(): string {
     .select:focus {
       outline: none;
       border-color: var(--vscode-focusBorder);
+    }
+
+    .settings-divider {
+      height: 1px;
+      background: var(--vscode-panel-border);
+      margin: 12px 0;
+    }
+
+    .settings-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--vscode-foreground);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .settings-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-toggle {
+      position: relative;
+      width: 32px;
+      height: 18px;
+      background: var(--vscode-input-background);
+      border-radius: 9px;
+      border: 1px solid var(--vscode-input-border);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .settings-toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      background: var(--vscode-descriptionForeground);
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .settings-toggle.active {
+      background: var(--vscode-charts-green, #22c55e);
+      border-color: var(--vscode-charts-green, #22c55e);
+    }
+
+    .settings-toggle.active .settings-toggle-knob {
+      left: 16px;
+      background: white;
+    }
+
+    .settings-toggle-label {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    /* Token Budget Input */
+    .token-budget-input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .token-budget-input-row .input {
+      width: 100px;
+      padding: 4px 8px;
+      border: 1px solid var(--vscode-input-border);
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .token-budget-input-row .input:focus {
+      outline: none;
+      border-color: var(--vscode-focusBorder);
+    }
+
+    .token-budget-suffix {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .token-budget-hint {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      margin-top: 4px;
+      opacity: 0.8;
+    }
+
+    #token-budget-section.hidden {
+      display: none;
+    }
+
+    /* Inline Suggestions Widget (compact, above input) */
+    .inline-suggestions {
+      padding: 6px 12px;
+      background: var(--vscode-editorWidget-background);
+      border-top: 1px solid var(--vscode-panel-border);
+      animation: slideUp 0.15s ease;
+    }
+
+    .inline-suggestions.hidden {
+      display: none;
+    }
+
+    .inline-suggestions-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .inline-suggestions-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .inline-suggestions-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .inline-suggestions-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      cursor: pointer;
+    }
+
+    .inline-suggestions-toggle input {
+      width: 12px;
+      height: 12px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .inline-toggle-text {
+      white-space: nowrap;
+    }
+
+    .inline-suggestions-dismiss {
+      background: none;
+      border: none;
+      color: var(--vscode-descriptionForeground);
+      cursor: pointer;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      border-radius: 3px;
+    }
+
+    .inline-suggestions-dismiss:hover {
+      opacity: 1;
+      background: var(--vscode-toolbar-hoverBackground);
+    }
+
+    /* Recommendation Chips */
+    .recommendation-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      cursor: pointer;
+      background: var(--vscode-badge-background);
+      border: 1px solid transparent;
+      transition: all 0.12s ease;
+      max-width: 180px;
+    }
+
+    .recommendation-chip:hover {
+      background: var(--vscode-list-hoverBackground);
+    }
+
+    .recommendation-chip.high-confidence {
+      border-color: var(--vscode-charts-green, #22c55e);
+    }
+
+    .recommendation-chip.medium-confidence {
+      border-color: var(--vscode-charts-yellow, #eab308);
+    }
+
+    .recommendation-chip.low-confidence {
+      border-color: var(--vscode-descriptionForeground);
+      opacity: 0.8;
+    }
+
+    .recommendation-chip.selected {
+      background: var(--vscode-list-activeSelectionBackground);
+      border-color: var(--vscode-focusBorder);
+    }
+
+    .chip-name {
+      font-weight: 500;
+      color: var(--vscode-foreground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chip-type {
+      font-size: 9px;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0.8;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Toolbar Persona Indicator Button */
+    .persona-indicator-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .persona-indicator-btn:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+      color: var(--vscode-foreground);
+    }
+
+    .persona-indicator-btn.has-persona {
+      color: var(--vscode-foreground);
+      background: var(--vscode-badge-background);
+    }
+
+    .persona-indicator-btn.has-persona:hover {
+      background: var(--vscode-list-hoverBackground);
+    }
+
+    .persona-indicator-btn svg {
+      flex-shrink: 0;
+    }
+
+    #toolbar-persona-name {
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* About Panel */
+    .about-panel {
+      padding: 16px;
+      background: var(--vscode-sideBar-background);
+      border-bottom: 1px solid var(--vscode-panel-border);
+    }
+
+    .about-panel.hidden {
+      display: none;
+    }
+
+    .about-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .about-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+    }
+
+    .about-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .about-title h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .about-version {
+      font-size: 12px;
+      color: var(--vscode-descriptionForeground);
+      background: var(--vscode-badge-background);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .about-tagline {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--vscode-foreground);
+      margin: 0 0 8px 0;
+    }
+
+    .about-description {
+      font-size: 12px;
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.5;
+      margin: 0 0 16px 0;
+    }
+
+    .about-section {
+      margin-bottom: 12px;
+    }
+
+    .about-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--vscode-descriptionForeground);
+      margin: 0 0 4px 0;
+    }
+
+    .about-section p {
+      margin: 0;
+      font-size: 12px;
+    }
+
+    .about-author {
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .about-links {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .about-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--vscode-textLink-foreground);
+      text-decoration: none;
+    }
+
+    .about-links a:hover {
+      text-decoration: underline;
+    }
+
+    .about-links svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .credits-list {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .credits-list li {
+      margin: 2px 0;
     }
 
     /* Agent Configuration Panel */
@@ -4055,15 +4585,139 @@ function getStyles(): string {
       border-color: var(--vscode-editorError-foreground, #f85149);
       color: var(--vscode-editorError-foreground, #f85149);
     }
+
+    /* Setup Overlay Styles */
+    .setup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--vscode-sideBar-background);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+    }
+
+    .setup-overlay.hidden {
+      display: none;
+    }
+
+    .setup-content {
+      text-align: center;
+      padding: 40px;
+      max-width: 400px;
+    }
+
+    .setup-logo {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 20px;
+    }
+
+    .setup-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .setup-step {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--vscode-foreground);
+    }
+
+    .setup-message {
+      font-size: 13px;
+      color: var(--vscode-descriptionForeground);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .setup-progress-track {
+      height: 4px;
+      background: var(--vscode-progressBar-background, rgba(255, 255, 255, 0.1));
+      border-radius: 2px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .setup-progress-bar {
+      height: 100%;
+      background: var(--vscode-progressBar-background, #0078d4);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .setup-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .setup-btn {
+      padding: 8px 20px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .setup-btn.primary {
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+    }
+
+    .setup-btn.primary:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+
+    .setup-btn.secondary {
+      background: transparent;
+      color: var(--vscode-foreground);
+      border: 1px solid var(--vscode-input-border);
+    }
+
+    .setup-btn.secondary:hover {
+      background: var(--vscode-list-hoverBackground);
+    }
+
+    .setup-error {
+      margin-top: 20px;
+    }
+
+    .setup-error.hidden {
+      display: none;
+    }
+
+    .setup-error-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .setup-error-message {
+      color: var(--vscode-editorError-foreground, #f85149);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .setup-auth-prompt {
+      text-align: center;
+    }
   `;
 }
 
-function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string, string>, claudeLogoUri: string, openaiLogoLightUri: string, openaiLogoDarkUri: string): string {
+function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string, string>, claudeLogoUri: string, openaiLogoLightUri: string, openaiLogoDarkUri: string, version: string): string {
   return `
     (function() {
       const vscode = acquireVsCodeApi();
       const MERMAID_URI = '${mermaidUri}';
       const LOGO_URI = '${logoUri}';
+      const MYSTI_VERSION = '${version}';
       var ICON_URIS = ${JSON.stringify(iconUris)};
       var CLAUDE_LOGO = '${claudeLogoUri}';
       var OPENAI_LOGO_LIGHT = '${openaiLogoLightUri}';
@@ -4342,7 +4996,25 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
           enabledSkills: []
         },
         availablePersonas: [],
-        availableSkills: []
+        availableSkills: [],
+        // Agent settings (configurable via settings panel)
+        agentSettings: {
+          autoSuggest: true,
+          tokenLimitEnabled: false,
+          maxTokenBudget: 0
+        },
+        // Setup state
+        setup: {
+          isChecking: true,
+          isReady: false,
+          currentStep: 'checking',
+          progress: 0,
+          message: '',
+          providerId: null,
+          error: null,
+          npmAvailable: true,
+          providers: []
+        }
       };
 
       // Helper to send messages with panelId
@@ -4388,6 +5060,8 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
       const stopBtn = document.getElementById('stop-btn');
       const settingsBtn = document.getElementById('settings-btn');
       const settingsPanel = document.getElementById('settings-panel');
+      const aboutBtn = document.getElementById('about-btn');
+      const aboutPanel = document.getElementById('about-panel');
       const newChatBtn = document.getElementById('new-chat-btn');
       const modeSelect = document.getElementById('mode-select');
       const thinkingSelect = document.getElementById('thinking-select');
@@ -4783,6 +5457,22 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
             });
           }
         }, 300);
+
+        // Debounce recommendation request (500ms) - only if auto-suggest enabled
+        if (window.recommendationDebounceTimer) {
+          clearTimeout(window.recommendationDebounceTimer);
+        }
+        if (state.agentSettings && state.agentSettings.autoSuggest) {
+          window.recommendationDebounceTimer = setTimeout(function() {
+            var text = inputEl.value.trim();
+            if (text && text.length > 10 && !text.startsWith('/')) {
+              postMessageWithPanelId({
+                type: 'getAgentRecommendations',
+                payload: { query: text }
+              });
+            }
+          }, 500);
+        }
         });
       } else {
         console.error('[Mysti Webview] inputEl not found!');
@@ -4801,12 +5491,30 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
 
       settingsBtn.addEventListener('click', function() {
         settingsPanel.classList.toggle('hidden');
-        // Close agent config panel when settings opens
+        // Close other panels when settings opens
         var agentConfigPanel = document.getElementById('agent-config-panel');
         if (agentConfigPanel && !settingsPanel.classList.contains('hidden')) {
           agentConfigPanel.classList.add('hidden');
         }
+        if (aboutPanel && !settingsPanel.classList.contains('hidden')) {
+          aboutPanel.classList.add('hidden');
+        }
       });
+
+      // About panel toggle
+      if (aboutBtn && aboutPanel) {
+        aboutBtn.addEventListener('click', function() {
+          aboutPanel.classList.toggle('hidden');
+          // Close other panels when about opens
+          if (!aboutPanel.classList.contains('hidden')) {
+            settingsPanel.classList.add('hidden');
+            var agentConfigPanel = document.getElementById('agent-config-panel');
+            if (agentConfigPanel) {
+              agentConfigPanel.classList.add('hidden');
+            }
+          }
+        });
+      }
 
       // Agent config panel toggle
       var agentConfigBtn = document.getElementById('agent-config-btn');
@@ -4816,9 +5524,12 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
       if (agentConfigBtn && agentConfigPanel) {
         agentConfigBtn.addEventListener('click', function() {
           agentConfigPanel.classList.toggle('hidden');
-          // Close settings panel when config opens
+          // Close other panels when config opens
           if (!agentConfigPanel.classList.contains('hidden')) {
             settingsPanel.classList.add('hidden');
+            if (aboutPanel) {
+              aboutPanel.classList.add('hidden');
+            }
           }
         });
       }
@@ -4903,6 +5614,131 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
         updateConfigSummary();
       }
 
+      // Render agent recommendations from auto-suggest (compact inline widget)
+      function renderRecommendations(payload) {
+        var widget = document.getElementById('inline-suggestions');
+        var chipsContainer = document.getElementById('inline-suggestions-chips');
+        var autoSuggestCheck = document.getElementById('inline-auto-suggest-check');
+
+        if (!widget || !chipsContainer) return;
+
+        // Hide if no recommendations
+        if (!payload.recommendations || payload.recommendations.length === 0) {
+          widget.classList.add('hidden');
+          return;
+        }
+
+        // Sync auto-suggest checkbox with current state
+        if (autoSuggestCheck) {
+          autoSuggestCheck.checked = state.agentSettings && state.agentSettings.autoSuggest;
+        }
+
+        // Build compact recommendation chips (show type instead of reason for compactness)
+        var chipsHtml = payload.recommendations.map(function(rec) {
+          var confidenceClass = rec.confidence + '-confidence';
+          var typeLabel = rec.type === 'persona' ? 'persona' : 'skill';
+          return '<div class="recommendation-chip ' + confidenceClass + '" ' +
+                 'data-agent-id="' + rec.agent.id + '" ' +
+                 'data-agent-type="' + rec.type + '" ' +
+                 'title="' + escapeHtml(rec.reason) + '">' +
+                 '<span class="chip-name">' + escapeHtml(rec.agent.name) + '</span>' +
+                 '<span class="chip-type">' + typeLabel + '</span>' +
+                 '</div>';
+        }).join('');
+
+        chipsContainer.innerHTML = chipsHtml;
+        widget.classList.remove('hidden');
+
+        // Add click handlers to chips
+        chipsContainer.querySelectorAll('.recommendation-chip').forEach(function(chip) {
+          chip.addEventListener('click', function() {
+            var agentId = chip.dataset.agentId;
+            var agentType = chip.dataset.agentType;
+
+            if (agentType === 'persona') {
+              selectPersona(agentId);
+            } else if (agentType === 'skill') {
+              toggleSkill(agentId);
+            }
+
+            // Mark as selected
+            chip.classList.add('selected');
+
+            // Hide widget after selection
+            setTimeout(function() {
+              widget.classList.add('hidden');
+            }, 200);
+          });
+        });
+      }
+
+      // Inline suggestions widget handlers
+      (function() {
+        var dismissBtn = document.getElementById('inline-suggestions-dismiss');
+        var autoSuggestCheck = document.getElementById('inline-auto-suggest-check');
+        var widget = document.getElementById('inline-suggestions');
+
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', function() {
+            if (widget) widget.classList.add('hidden');
+          });
+        }
+
+        if (autoSuggestCheck) {
+          autoSuggestCheck.addEventListener('change', function() {
+            var isEnabled = autoSuggestCheck.checked;
+            state.agentSettings = state.agentSettings || {};
+            state.agentSettings.autoSuggest = isEnabled;
+
+            // Update settings panel toggle if visible
+            var settingsToggle = document.getElementById('auto-suggest-toggle');
+            if (settingsToggle) {
+              settingsToggle.classList.toggle('active', isEnabled);
+            }
+
+            // Send to extension
+            postMessageWithPanelId({
+              type: 'updateSettings',
+              payload: { 'agents.autoSuggest': isEnabled }
+            });
+
+            // Hide widget if auto-suggest is disabled
+            if (!isEnabled && widget) {
+              widget.classList.add('hidden');
+            }
+          });
+        }
+      })();
+
+      // Toolbar persona button click handler
+      (function() {
+        var personaBtn = document.getElementById('toolbar-persona-btn');
+        if (personaBtn) {
+          personaBtn.addEventListener('click', function() {
+            var widget = document.getElementById('inline-suggestions');
+            var inputEl = document.getElementById('message-input');
+
+            if (!widget) return;
+
+            if (widget.classList.contains('hidden')) {
+              // Request recommendations based on current input
+              var query = inputEl ? inputEl.value.trim() : '';
+              if (query.length > 3) {
+                postMessageWithPanelId({
+                  type: 'getAgentRecommendations',
+                  payload: { query: query }
+                });
+              } else {
+                // Show all personas if no meaningful input
+                showAllPersonaSuggestions();
+              }
+            } else {
+              widget.classList.add('hidden');
+            }
+          });
+        }
+      })();
+
       function togglePersona(personaId) {
         if (state.agentConfig.personaId === personaId) {
           // Deselect if clicking same persona
@@ -4917,6 +5753,21 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
         });
 
         updateConfigSummary();
+        updateToolbarPersonaIndicator();
+        saveAgentConfig();
+      }
+
+      // Select persona (always sets, never toggles) - used by inline suggestions
+      function selectPersona(personaId) {
+        state.agentConfig.personaId = personaId;
+
+        // Update persona cards UI
+        document.querySelectorAll('.persona-card').forEach(function(card) {
+          card.classList.toggle('selected', card.dataset.persona === personaId);
+        });
+
+        updateConfigSummary();
+        updateToolbarPersonaIndicator();
         saveAgentConfig();
       }
 
@@ -4963,6 +5814,62 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
           summaryText.textContent = parts.join(' + ');
           if (configBtn) configBtn.classList.add('has-config');
         }
+
+        // Also update toolbar persona indicator
+        updateToolbarPersonaIndicator();
+      }
+
+      // Update toolbar persona indicator button
+      function updateToolbarPersonaIndicator() {
+        var nameEl = document.getElementById('toolbar-persona-name');
+        var btn = document.getElementById('toolbar-persona-btn');
+        if (!nameEl || !btn) return;
+
+        if (state.agentConfig.personaId) {
+          var persona = state.availablePersonas.find(function(p) {
+            return p.id === state.agentConfig.personaId;
+          });
+          nameEl.textContent = persona ? persona.name : 'Unknown';
+          btn.classList.add('has-persona');
+          btn.title = 'Active: ' + (persona ? persona.name : 'Unknown') + ' (click to change)';
+        } else {
+          nameEl.textContent = 'No persona';
+          btn.classList.remove('has-persona');
+          btn.title = 'Click to select a persona';
+        }
+      }
+
+      // Show all personas in inline suggestions (when no context query)
+      function showAllPersonaSuggestions() {
+        var widget = document.getElementById('inline-suggestions');
+        var chipsContainer = document.getElementById('inline-suggestions-chips');
+        var autoSuggestCheck = document.getElementById('inline-auto-suggest-check');
+        if (!widget || !chipsContainer) return;
+
+        // Sync checkbox state
+        if (autoSuggestCheck) {
+          autoSuggestCheck.checked = state.agentSettings && state.agentSettings.autoSuggest;
+        }
+
+        var chipsHtml = state.availablePersonas.map(function(p) {
+          var isSelected = state.agentConfig.personaId === p.id;
+          return '<div class="recommendation-chip' + (isSelected ? ' selected' : '') + '" ' +
+                 'data-agent-id="' + p.id + '" data-agent-type="persona" ' +
+                 'title="' + escapeHtml(p.description || '') + '">' +
+                 '<span class="chip-name">' + escapeHtml(p.name) + '</span>' +
+                 '</div>';
+        }).join('');
+
+        chipsContainer.innerHTML = chipsHtml;
+        widget.classList.remove('hidden');
+
+        // Add click handlers
+        chipsContainer.querySelectorAll('.recommendation-chip').forEach(function(chip) {
+          chip.addEventListener('click', function() {
+            selectPersona(chip.dataset.agentId);
+            widget.classList.add('hidden');
+          });
+        });
       }
 
       function saveAgentConfig() {
@@ -5057,6 +5964,53 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
         state.settings.accessLevel = accessSelect.value;
         postMessageWithPanelId({ type: 'updateSettings', payload: { accessLevel: accessSelect.value } });
       });
+
+      // Agent settings event handlers
+      var autoSuggestToggle = document.getElementById('auto-suggest-toggle');
+      var tokenLimitToggle = document.getElementById('token-limit-toggle');
+      var tokenBudgetInput = document.getElementById('token-budget-input');
+      var tokenBudgetSection = document.getElementById('token-budget-section');
+
+      if (autoSuggestToggle) {
+        autoSuggestToggle.addEventListener('click', function() {
+          state.agentSettings.autoSuggest = !state.agentSettings.autoSuggest;
+          if (state.agentSettings.autoSuggest) {
+            autoSuggestToggle.classList.add('active');
+          } else {
+            autoSuggestToggle.classList.remove('active');
+          }
+          postMessageWithPanelId({ type: 'updateSettings', payload: { 'agents.autoSuggest': state.agentSettings.autoSuggest } });
+        });
+      }
+
+      if (tokenLimitToggle) {
+        tokenLimitToggle.addEventListener('click', function() {
+          state.agentSettings.tokenLimitEnabled = !state.agentSettings.tokenLimitEnabled;
+          if (state.agentSettings.tokenLimitEnabled) {
+            tokenLimitToggle.classList.add('active');
+            if (tokenBudgetSection) tokenBudgetSection.classList.remove('hidden');
+            // Restore budget value when enabled
+            var budgetValue = state.agentSettings.maxTokenBudget || 2000;
+            postMessageWithPanelId({ type: 'updateSettings', payload: { 'agents.maxTokenBudget': budgetValue } });
+          } else {
+            tokenLimitToggle.classList.remove('active');
+            if (tokenBudgetSection) tokenBudgetSection.classList.add('hidden');
+            // Set to 0 (unlimited) when disabled
+            postMessageWithPanelId({ type: 'updateSettings', payload: { 'agents.maxTokenBudget': 0 } });
+          }
+        });
+      }
+
+      if (tokenBudgetInput) {
+        tokenBudgetInput.addEventListener('change', function() {
+          var value = parseInt(tokenBudgetInput.value, 10);
+          if (value < 100) value = 100;
+          if (value > 16000) value = 16000;
+          tokenBudgetInput.value = value;
+          state.agentSettings.maxTokenBudget = value;
+          postMessageWithPanelId({ type: 'updateSettings', payload: { 'agents.maxTokenBudget': value } });
+        });
+      }
 
       providerSelect.addEventListener('change', function() {
         var newProvider = providerSelect.value;
@@ -5414,6 +6368,9 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
           case 'agentConfigUpdated':
             // Confirmation that config was saved
             break;
+          case 'agentRecommendations':
+            renderRecommendations(message.payload);
+            break;
           case 'conversationHistory':
             renderHistoryMenu(message.payload.conversations, message.payload.currentId);
             break;
@@ -5521,7 +6478,161 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
             autoResizeTextarea();
             inputEl.focus();
             break;
+          // Setup message handlers
+          case 'setupStatus':
+            handleSetupStatus(message.payload);
+            break;
+          case 'setupProgress':
+            handleSetupProgress(message.payload);
+            break;
+          case 'setupComplete':
+            handleSetupComplete(message.payload);
+            break;
+          case 'setupFailed':
+            handleSetupFailed(message.payload);
+            break;
+          case 'authPrompt':
+            handleAuthPrompt(message.payload);
+            break;
         }
+      }
+
+      // ========================================
+      // Setup Flow Handlers
+      // ========================================
+
+      function handleSetupStatus(payload) {
+        state.setup.providers = payload.providers;
+        state.setup.npmAvailable = payload.npmAvailable;
+        state.setup.isReady = payload.anyReady;
+
+        if (payload.anyReady) {
+          hideSetupOverlay();
+        }
+      }
+
+      function handleSetupProgress(payload) {
+        state.setup.currentStep = payload.step;
+        state.setup.providerId = payload.providerId;
+        state.setup.message = payload.message;
+        state.setup.progress = payload.progress || 0;
+        state.setup.isChecking = false;
+
+        updateSetupOverlay();
+      }
+
+      function handleSetupComplete(payload) {
+        state.setup.isReady = true;
+        state.setup.currentStep = 'ready';
+        state.setup.message = 'Setup complete!';
+        state.setup.error = null;
+
+        // Hide setup after brief success display
+        setTimeout(function() {
+          hideSetupOverlay();
+        }, 1000);
+      }
+
+      function handleSetupFailed(payload) {
+        state.setup.currentStep = 'failed';
+        state.setup.providerId = payload.providerId;
+        state.setup.error = payload.error;
+        state.setup.message = payload.error;
+
+        updateSetupOverlay();
+      }
+
+      function handleAuthPrompt(payload) {
+        state.setup.currentStep = 'authenticating';
+        state.setup.providerId = payload.providerId;
+        state.setup.message = payload.message;
+
+        showAuthPromptUI(payload);
+      }
+
+      function showSetupOverlay() {
+        var overlay = document.getElementById('setup-overlay');
+        if (overlay) {
+          overlay.classList.remove('hidden');
+        }
+      }
+
+      function hideSetupOverlay() {
+        var overlay = document.getElementById('setup-overlay');
+        if (overlay) {
+          overlay.classList.add('hidden');
+        }
+        state.setup.isReady = true;
+      }
+
+      function updateSetupOverlay() {
+        var overlay = document.getElementById('setup-overlay');
+        if (!overlay) return;
+
+        overlay.classList.remove('hidden');
+
+        var progressEl = overlay.querySelector('.setup-progress-bar');
+        var messageEl = overlay.querySelector('.setup-message');
+        var stepEl = overlay.querySelector('.setup-step');
+
+        if (progressEl) {
+          progressEl.style.width = state.setup.progress + '%';
+        }
+        if (messageEl) {
+          messageEl.textContent = state.setup.message;
+        }
+        if (stepEl) {
+          var stepText = state.setup.currentStep === 'checking' ? 'Checking...' :
+                         state.setup.currentStep === 'installing' ? 'Installing...' :
+                         state.setup.currentStep === 'authenticating' ? 'Authenticating...' :
+                         state.setup.currentStep === 'ready' ? 'Ready!' :
+                         state.setup.currentStep === 'failed' ? 'Setup Failed' : '';
+          stepEl.textContent = stepText;
+        }
+
+        // Show error UI if failed
+        if (state.setup.currentStep === 'failed') {
+          var errorSection = overlay.querySelector('.setup-error');
+          if (errorSection) {
+            errorSection.classList.remove('hidden');
+            var errorMsg = errorSection.querySelector('.setup-error-message');
+            if (errorMsg) errorMsg.textContent = state.setup.error;
+          }
+        }
+      }
+
+      function showAuthPromptUI(payload) {
+        var overlay = document.getElementById('setup-overlay');
+        if (!overlay) return;
+
+        overlay.classList.remove('hidden');
+        var content = overlay.querySelector('.setup-content');
+        if (!content) return;
+
+        content.innerHTML =
+          '<div class="setup-auth-prompt">' +
+            '<div class="setup-icon">🔐</div>' +
+            '<div class="setup-step">Authentication Required</div>' +
+            '<div class="setup-message">' + payload.message + '</div>' +
+            '<div class="setup-buttons">' +
+              '<button class="setup-btn primary" id="auth-confirm-btn">Sign In</button>' +
+              '<button class="setup-btn secondary" id="auth-skip-btn">Later</button>' +
+            '</div>' +
+          '</div>';
+
+        document.getElementById('auth-confirm-btn').addEventListener('click', function() {
+          postMessageWithPanelId({ type: 'authConfirm', payload: { providerId: payload.providerId } });
+          content.innerHTML =
+            '<div class="setup-progress">' +
+              '<div class="setup-icon">⏳</div>' +
+              '<div class="setup-step">Waiting for authentication...</div>' +
+              '<div class="setup-message">Complete sign-in in the terminal that opened</div>' +
+            '</div>';
+        });
+
+        document.getElementById('auth-skip-btn').addEventListener('click', function() {
+          postMessageWithPanelId({ type: 'authSkip', payload: { providerId: payload.providerId } });
+        });
       }
 
       // ========================================
@@ -5861,6 +6972,11 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
             state.agentConfig = { personaId: null, enabledSkills: [] };
           }
           renderAgentConfigPanel();
+        }
+
+        // Initialize agent settings UI
+        if (state.agentSettings) {
+          updateAgentSettingsUI();
         }
 
         if (state.conversation && state.conversation.messages) {
@@ -7123,7 +8239,7 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
       }
 
       function clearMessages() {
-        messagesEl.innerHTML = '<div class="welcome-container"><div class="welcome-header"><img src="' + LOGO_URI + '" alt="Mysti" class="welcome-logo" /><h2>Welcome to Mysti</h2><p>Your AI coding assistant. Choose an action or ask anything!</p></div><div class="welcome-suggestions" id="welcome-suggestions"></div></div>';
+        messagesEl.innerHTML = '<div class="welcome-container"><div class="welcome-header"><img src="' + LOGO_URI + '" alt="Mysti" class="welcome-logo" /><h2>Welcome to Mysti</h2><p>Your AI coding agent. Choose an action or ask anything!</p></div><div class="welcome-suggestions" id="welcome-suggestions"></div></div>';
         renderWelcomeSuggestions();
         // Reset all streaming buffers
         currentResponse = '';
@@ -7164,6 +8280,48 @@ function getScript(mermaidUri: string, logoUri: string, iconUris: Record<string,
           'detailed-plan': 'Detailed Plan'
         };
         modeIndicator.textContent = modeLabels[state.settings.mode] || state.settings.mode;
+      }
+
+      /**
+       * Update the agent settings UI from state
+       */
+      function updateAgentSettingsUI() {
+        var autoSuggestToggle = document.getElementById('auto-suggest-toggle');
+        var tokenLimitToggle = document.getElementById('token-limit-toggle');
+        var tokenBudgetInput = document.getElementById('token-budget-input');
+        var tokenBudgetSection = document.getElementById('token-budget-section');
+
+        if (autoSuggestToggle) {
+          if (state.agentSettings.autoSuggest) {
+            autoSuggestToggle.classList.add('active');
+          } else {
+            autoSuggestToggle.classList.remove('active');
+          }
+        }
+
+        // Token limit is enabled when maxTokenBudget > 0
+        var tokenLimitEnabled = state.agentSettings.maxTokenBudget > 0;
+        state.agentSettings.tokenLimitEnabled = tokenLimitEnabled;
+
+        if (tokenLimitToggle) {
+          if (tokenLimitEnabled) {
+            tokenLimitToggle.classList.add('active');
+          } else {
+            tokenLimitToggle.classList.remove('active');
+          }
+        }
+
+        if (tokenBudgetSection) {
+          if (tokenLimitEnabled) {
+            tokenBudgetSection.classList.remove('hidden');
+          } else {
+            tokenBudgetSection.classList.add('hidden');
+          }
+        }
+
+        if (tokenBudgetInput && tokenLimitEnabled) {
+          tokenBudgetInput.value = String(state.agentSettings.maxTokenBudget);
+        }
       }
 
       /**

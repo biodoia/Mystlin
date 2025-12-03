@@ -1,7 +1,22 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import * as vscode from 'vscode';
 import { ChildProcess } from 'child_process';
 import { ProviderRegistry } from '../providers/ProviderRegistry';
 import type { ICliProvider, PersonaConfig } from '../providers/base/IProvider';
+import type { BaseCliProvider } from '../providers/base/BaseCliProvider';
+import type { AgentContextManager } from './AgentContextManager';
 import type {
   ContextItem,
   Settings,
@@ -77,6 +92,34 @@ export class ProviderManager {
    */
   public getProvider(name: string): ProviderConfig | undefined {
     return this._registry.get(name)?.config;
+  }
+
+  /**
+   * Get the actual provider instance (for setup/auth operations)
+   */
+  public getProviderInstance(name: string): ICliProvider | undefined {
+    return this._registry.get(name);
+  }
+
+  /**
+   * Get all provider instances
+   */
+  public getAllProviders(): ICliProvider[] {
+    return this._registry.getAll();
+  }
+
+  /**
+   * Set the AgentContextManager on all providers
+   * This enables three-tier agent loading from markdown files
+   */
+  public setAgentContextManager(manager: AgentContextManager): void {
+    for (const provider of this._registry.getAll()) {
+      // Check if provider has setAgentContextManager method (BaseCliProvider)
+      if ('setAgentContextManager' in provider && typeof (provider as BaseCliProvider).setAgentContextManager === 'function') {
+        (provider as BaseCliProvider).setAgentContextManager(manager);
+      }
+    }
+    console.log('[Mysti] AgentContextManager connected to all providers');
   }
 
   /**

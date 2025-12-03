@@ -1,3 +1,16 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import type * as vscode from 'vscode';
 import type {
   ContextItem,
@@ -10,7 +23,8 @@ import type {
   SkillId,
   DeveloperPersona,
   Skill,
-  AgentConfiguration
+  AgentConfiguration,
+  AuthStatus
 } from '../../types';
 
 /**
@@ -280,9 +294,11 @@ export interface ICliProvider {
   discoverCli(): Promise<CliDiscoveryResult>;
   getCliPath(): string;
 
-  // Authentication
+  // Authentication & Setup
   getAuthConfig(): Promise<AuthConfig>;
-  checkAuthentication(): Promise<boolean>;
+  checkAuthentication(): Promise<AuthStatus>;
+  getAuthCommand(): string;
+  getInstallCommand(): string;
 
   // Message Handling
   sendMessage(

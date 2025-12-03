@@ -1,3 +1,16 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -11,7 +24,8 @@ import type {
 import type {
   Settings,
   StreamChunk,
-  ProviderConfig
+  ProviderConfig,
+  AuthStatus
 } from '../../types';
 
 /**
@@ -90,9 +104,38 @@ export class ClaudeCodeProvider extends BaseCliProvider {
     };
   }
 
-  async checkAuthentication(): Promise<boolean> {
+  async checkAuthentication(): Promise<AuthStatus> {
     const auth = await this.getAuthConfig();
-    return auth.isAuthenticated;
+    if (!auth.isAuthenticated) {
+      return {
+        authenticated: false,
+        error: 'Not authenticated. Please run "claude auth login" to sign in.'
+      };
+    }
+
+    // Try to get user info from config
+    try {
+      if (auth.configPath && fs.existsSync(auth.configPath)) {
+        const configContent = fs.readFileSync(auth.configPath, 'utf-8');
+        const config = JSON.parse(configContent);
+        return {
+          authenticated: true,
+          user: config.email || config.user || 'Authenticated'
+        };
+      }
+    } catch {
+      // Config exists but couldn't parse - still authenticated
+    }
+
+    return { authenticated: true };
+  }
+
+  getAuthCommand(): string {
+    return 'claude auth login';
+  }
+
+  getInstallCommand(): string {
+    return 'npm install -g @anthropic-ai/claude-code';
   }
 
   protected buildCliArgs(settings: Settings, hasSession: boolean): string[] {

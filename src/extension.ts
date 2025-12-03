@@ -1,3 +1,16 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import * as vscode from 'vscode';
 import { ChatViewProvider } from './providers/ChatViewProvider';
 import { ContextManager } from './managers/ContextManager';
@@ -6,6 +19,8 @@ import { ProviderManager } from './managers/ProviderManager';
 import { SuggestionManager } from './managers/SuggestionManager';
 import { BrainstormManager } from './managers/BrainstormManager';
 import { PermissionManager } from './managers/PermissionManager';
+import { SetupManager } from './managers/SetupManager';
+import { TelemetryManager } from './managers/TelemetryManager';
 
 let chatViewProvider: ChatViewProvider;
 let contextManager: ContextManager;
@@ -14,9 +29,16 @@ let providerManager: ProviderManager;
 let suggestionManager: SuggestionManager;
 let brainstormManager: BrainstormManager;
 let permissionManager: PermissionManager;
+let setupManager: SetupManager;
+let telemetryManager: TelemetryManager;
 
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Mysti extension is now active');
+
+  // Initialize telemetry first
+  telemetryManager = new TelemetryManager(context);
+  const version = context.extension.packageJSON.version || '0.0.0';
+  telemetryManager.trackActivation(version);
 
   // Initialize managers
   contextManager = new ContextManager(context);
@@ -35,15 +57,21 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize brainstorm manager
   brainstormManager = new BrainstormManager(context, providerManager);
 
+  // Initialize setup manager for CLI auto-setup
+  setupManager = new SetupManager(context, providerManager);
+
   // Initialize the chat view provider
   chatViewProvider = new ChatViewProvider(
     context.extensionUri,
+    context,  // Extension context for AgentLoader
     contextManager,
     conversationManager,
     providerManager,
     suggestionManager,
     brainstormManager,
-    permissionManager
+    permissionManager,
+    setupManager,
+    telemetryManager
   );
 
   // Register the webview provider
@@ -114,6 +142,21 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('mysti.openInNewTab', () => {
       chatViewProvider.openInNewTab();
+    })
+  );
+
+  // Debug commands for testing setup flow (not in package.json - use Command Palette)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('mysti.debugSetup', () => {
+      chatViewProvider.debugForceSetup();
+      vscode.window.showInformationMessage('Debug: Setup flow triggered');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('mysti.debugSetupFailure', () => {
+      chatViewProvider.debugForceSetupFailure();
+      vscode.window.showInformationMessage('Debug: Setup failure triggered');
     })
   );
 

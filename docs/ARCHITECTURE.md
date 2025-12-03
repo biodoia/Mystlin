@@ -28,7 +28,10 @@ Mysti/
 │   │   ├── ResponseClassifier.ts
 │   │   ├── PlanOptionManager.ts
 │   │   ├── SuggestionManager.ts
-│   │   └── AutocompleteManager.ts
+│   │   ├── AutocompleteManager.ts
+│   │   ├── AgentLoader.ts        # Three-tier agent loading from markdown
+│   │   ├── AgentContextManager.ts # Agent recommendations & prompt building
+│   │   └── SetupManager.ts       # CLI auto-setup & authentication
 │   ├── providers/             # AI provider implementations
 │   │   ├── ChatViewProvider.ts
 │   │   ├── ProviderRegistry.ts
@@ -204,8 +207,82 @@ Generates context-aware quick action suggestions.
 Provides sentence/paragraph/message completion.
 
 **Responsibilities:**
+
 - Generate completions based on partial input
 - Support multiple completion types
+
+#### AgentLoader
+
+Three-tier progressive loading system for agent definitions from markdown files.
+
+**Responsibilities:**
+
+- Load agent metadata from multiple sources (core, plugin, user, workspace)
+- Parse YAML frontmatter from markdown files
+- Cache agents at each tier for performance
+- Provide fast UI rendering with minimal data
+
+**Three-Tier Loading:**
+
+```text
+Tier 1: Metadata (AgentMetadata)
+├── id, name, description, icon
+├── category, source, activationTriggers
+└── Always loaded for fast UI
+
+Tier 2: Instructions (AgentInstructions)
+├── Extends Tier 1
+├── instructions, communicationStyle
+├── priorities, bestPractices, antiPatterns
+└── Loaded on selection
+
+Tier 3: Full (AgentFull)
+├── Extends Tier 2
+├── codeExamples, fullContent
+└── Loaded on demand for detailed view
+```
+
+**Source Priority:**
+
+1. Core agents (`resources/agents/core/`)
+2. Plugin agents (`resources/agents/plugins/`)
+3. User agents (`~/.mysti/agents/`)
+4. Workspace agents (`.mysti/agents/`)
+
+**Key Methods:**
+
+```typescript
+loadAllMetadata(): Promise<{ personas: AgentMetadata[]; skills: AgentMetadata[] }>
+loadInstructions(agentId: string): Promise<AgentInstructions | null>
+loadFull(agentId: string): Promise<AgentFull | null>
+findMatchingAgents(query: string): AgentMetadata[]
+```
+
+#### AgentContextManager
+
+Builds agent context for prompt injection with token budget management.
+
+**Responsibilities:**
+
+- Get recommendations based on user query
+- Build prompt context within token budget
+- Provide condensed versions when budget exceeded
+- Manage auto-suggest settings
+
+**Key Methods:**
+
+```typescript
+getRecommendations(query: string, limit?: number): AgentRecommendation[]
+buildPromptContext(config: AgentConfiguration): Promise<AgentPromptContext>
+isAutoSuggestEnabled(): boolean
+setTokenBudget(maxTokens: number): Promise<void>
+```
+
+**Token Budget Behavior:**
+
+- `0` = unlimited (no budget enforcement)
+- `> 0` = limit agent context to specified tokens
+- When exceeded, uses condensed persona prompt
 
 ### Providers
 

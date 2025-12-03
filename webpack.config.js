@@ -1,3 +1,13 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 //@ts-check
 'use strict';
 

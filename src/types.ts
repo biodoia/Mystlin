@@ -1,3 +1,16 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export type OperationMode = 'default' | 'ask-before-edit' | 'edit-automatically' | 'quick-plan' | 'detailed-plan';
 export type ThinkingLevel = 'none' | 'low' | 'medium' | 'high';
 export type AccessLevel = 'read-only' | 'ask-permission' | 'full-access';
@@ -402,4 +415,226 @@ export interface Skill {
 export interface AgentConfiguration {
   personaId: DeveloperPersonaId | null;
   enabledSkills: SkillId[];
+}
+
+// ============================================================================
+// Setup & Authentication Types
+// ============================================================================
+
+/**
+ * Setup step in the auto-setup flow
+ */
+export type SetupStep = 'checking' | 'installing' | 'authenticating' | 'ready' | 'failed';
+
+/**
+ * Authentication status for a provider
+ */
+export interface AuthStatus {
+  authenticated: boolean;
+  user?: string;
+  error?: string;
+}
+
+/**
+ * Result of auto-install attempt
+ */
+export interface InstallResult {
+  success: boolean;
+  error?: string;
+  requiresManual?: boolean;
+}
+
+/**
+ * Result of full setup flow
+ */
+export interface SetupResult {
+  success: boolean;
+  installed: boolean;
+  authenticated: boolean;
+  error?: string;
+  requiresManualStep?: 'install' | 'auth';
+}
+
+/**
+ * Setup status for a provider
+ */
+export interface ProviderSetupStatus {
+  providerId: string;
+  displayName: string;
+  installed: boolean;
+  authenticated: boolean;
+  installing?: boolean;
+  authenticating?: boolean;
+  error?: string;
+}
+
+// Setup-related webview message types
+export interface SetupProgressMessage {
+  type: 'setupProgress';
+  payload: {
+    step: SetupStep;
+    providerId: string;
+    message: string;
+    progress?: number;  // 0-100 for progress bar
+  };
+}
+
+export interface SetupCompleteMessage {
+  type: 'setupComplete';
+  payload: {
+    providerId: string;
+  };
+}
+
+export interface SetupFailedMessage {
+  type: 'setupFailed';
+  payload: {
+    providerId: string;
+    error: string;
+    canRetry: boolean;
+    requiresManual?: boolean;
+  };
+}
+
+export interface AuthPromptMessage {
+  type: 'authPrompt';
+  payload: {
+    providerId: string;
+    displayName: string;
+    message: string;
+  };
+}
+
+export interface AuthConfirmMessage {
+  type: 'authConfirm';
+  payload: {
+    providerId: string;
+  };
+}
+
+export interface AuthSkipMessage {
+  type: 'authSkip';
+  payload: {
+    providerId: string;
+  };
+}
+
+export interface RetrySetupMessage {
+  type: 'retrySetup';
+  payload: {
+    providerId: string;
+  };
+}
+
+export interface SkipSetupMessage {
+  type: 'skipSetup';
+}
+
+export interface CheckSetupMessage {
+  type: 'checkSetup';
+}
+
+export interface SetupStatusMessage {
+  type: 'setupStatus';
+  payload: {
+    providers: ProviderSetupStatus[];
+    npmAvailable: boolean;
+    anyReady: boolean;
+  };
+}
+
+// ============================================================================
+// Agent System Types (Three-Tier Loading)
+// ============================================================================
+
+/**
+ * Agent source location
+ */
+export type AgentSource = 'core' | 'plugin' | 'user' | 'workspace';
+
+/**
+ * Agent type discriminator
+ */
+export type AgentTypeDiscriminator = 'persona' | 'skill';
+
+/**
+ * Loading tier level for progressive disclosure
+ */
+export type AgentLoadingTier = 'metadata' | 'instructions' | 'full';
+
+/**
+ * Tier 1: Minimal metadata for UI display (always loaded)
+ */
+export interface AgentMetadataInfo {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  category: string;
+  source: AgentSource;
+  activationTriggers?: string[];
+}
+
+/**
+ * Recommendation confidence level
+ */
+export type RecommendationConfidence = 'high' | 'medium' | 'low';
+
+/**
+ * Agent recommendation with context
+ */
+export interface AgentRecommendationInfo {
+  agent: AgentMetadataInfo;
+  type: AgentTypeDiscriminator;
+  confidence: RecommendationConfidence;
+  matchedTriggers: string[];
+  reason: string;
+}
+
+/**
+ * Webview message for agent recommendations
+ */
+export interface AgentRecommendationsMessage {
+  type: 'agentRecommendations';
+  payload: {
+    recommendations: AgentRecommendationInfo[];
+    query: string;
+  };
+}
+
+/**
+ * Webview message for selecting a recommended agent
+ */
+export interface SelectAgentMessage {
+  type: 'selectAgent';
+  payload: {
+    agentId: string;
+    agentType: AgentTypeDiscriminator;
+  };
+}
+
+/**
+ * Webview message for agent details request
+ */
+export interface GetAgentDetailsMessage {
+  type: 'getAgentDetails';
+  payload: {
+    agentId: string;
+  };
+}
+
+/**
+ * Webview message for agent details response
+ */
+export interface AgentDetailsMessage {
+  type: 'agentDetails';
+  payload: {
+    agentId: string;
+    name: string;
+    description: string;
+    instructions: string;
+    bestPractices?: string[];
+    antiPatterns?: string[];
+    codeExamples?: string;
+  };
 }

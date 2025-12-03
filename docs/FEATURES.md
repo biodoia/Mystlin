@@ -187,6 +187,49 @@ Mix and match skills to fine-tune behavior.
 3. Toggle desired skills
 4. Configuration persists per-conversation
 
+### Toolbar Persona Indicator
+
+A quick-access persona indicator appears in the toolbar between context usage and mode selector.
+
+**Features:**
+
+- Shows the currently active persona name (or "No persona" when none selected)
+- Click to toggle inline suggestions widget
+- Visual highlight when a persona is active
+
+### Auto-Suggest Personas
+
+Mysti can automatically suggest relevant personas based on your message content.
+
+**How it works:**
+
+1. Start typing your message
+2. After a brief delay, Mysti analyzes your input
+3. Relevant personas appear as chips above the input area
+4. Click a chip to select that persona
+
+**Settings:**
+
+- Enabled by default (`mysti.agents.autoSuggest: true`)
+- Toggle via the inline suggestions widget or settings
+
+### Token Budget (Optional)
+
+Control the maximum tokens used for agent context (personas + skills).
+
+**Settings:**
+
+- `mysti.agents.maxTokenBudget`: Maximum tokens (default: `0` = unlimited)
+- When set to 0, no budget enforcement is applied
+- When set to a value (e.g., 2000), agent context is limited to that token count
+- If a persona exceeds the budget, a condensed version is used
+
+**Recommended values:**
+
+- 0 (unlimited) - Full persona/skill instructions
+- 1000-2000 - Balanced context usage
+- 500-1000 - Minimal context footprint
+
 ---
 
 ## Plan Selection
@@ -306,6 +349,8 @@ All Mysti settings with descriptions and defaults.
 | `mysti.agents.claudeCustomPrompt` | `""` | Custom prompt for Claude |
 | `mysti.agents.codexPersona` | `"neutral"` | Codex's persona in brainstorm |
 | `mysti.agents.codexCustomPrompt` | `""` | Custom prompt for Codex |
+| `mysti.agents.autoSuggest` | `true` | Auto-suggest personas based on message content |
+| `mysti.agents.maxTokenBudget` | `0` | Max tokens for agent context (0 = unlimited) |
 
 ### Permission Settings
 

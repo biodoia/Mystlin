@@ -1,3 +1,16 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import * as vscode from 'vscode';
 import { spawn, ChildProcess } from 'child_process';
 import type {
@@ -15,8 +28,10 @@ import type {
   Conversation,
   StreamChunk,
   ProviderConfig,
-  AgentConfiguration
+  AgentConfiguration,
+  AuthStatus
 } from '../../types';
+import type { AgentContextManager } from '../../managers/AgentContextManager';
 
 /**
  * Abstract base class for CLI-based AI providers
@@ -26,6 +41,7 @@ export abstract class BaseCliProvider implements ICliProvider {
   protected _extensionContext: vscode.ExtensionContext;
   protected _currentProcess: ChildProcess | null = null;
   protected _currentSessionId: string | null = null;
+  protected _agentContextManager: AgentContextManager | null = null;
 
   // Identity - must be implemented by subclasses
   abstract readonly id: string;
@@ -37,11 +53,21 @@ export abstract class BaseCliProvider implements ICliProvider {
     this._extensionContext = context;
   }
 
+  /**
+   * Set the agent context manager for dynamic agent loading
+   * If not set, falls back to static DEVELOPER_PERSONAS/DEVELOPER_SKILLS
+   */
+  public setAgentContextManager(manager: AgentContextManager): void {
+    this._agentContextManager = manager;
+  }
+
   // Abstract methods - must be implemented by subclasses
   abstract discoverCli(): Promise<CliDiscoveryResult>;
   abstract getCliPath(): string;
   abstract getAuthConfig(): Promise<AuthConfig>;
-  abstract checkAuthentication(): Promise<boolean>;
+  abstract checkAuthentication(): Promise<AuthStatus>;
+  abstract getAuthCommand(): string;
+  abstract getInstallCommand(): string;
 
   /**
    * Build CLI arguments for the provider
@@ -127,7 +153,8 @@ export abstract class BaseCliProvider implements ICliProvider {
     const args = this.buildCliArgs(settings, this.hasSession());
 
     // Build prompt with context, persona, and agent config
-    const fullPrompt = this.buildPrompt(content, context, conversation, settings, persona, agentConfig);
+    // Use async version to support three-tier agent loading
+    const fullPrompt = await this.buildPromptAsync(content, context, conversation, settings, persona, agentConfig);
 
     try {
       // Get workspace folder for CWD
@@ -262,9 +289,40 @@ export abstract class BaseCliProvider implements ICliProvider {
 
   /**
    * Build agent instructions from persona + skills configuration
+   * Uses AgentContextManager if available, otherwise falls back to static data
    * Returns empty string if nothing configured (default CLI behavior)
    */
-  protected buildAgentInstructions(agentConfig?: AgentConfiguration): string {
+  protected async buildAgentInstructionsAsync(agentConfig?: AgentConfiguration): Promise<string> {
+    if (!agentConfig || (!agentConfig.personaId && agentConfig.enabledSkills.length === 0)) {
+      return '';
+    }
+
+    // Try to use AgentContextManager for dynamic loading (three-tier system)
+    if (this._agentContextManager) {
+      try {
+        const promptContext = await this._agentContextManager.buildPromptContext(agentConfig);
+        if (promptContext.systemPrompt) {
+          // Log any warnings
+          for (const warning of promptContext.warnings) {
+            console.warn(`[Mysti] ${this.displayName}: ${warning}`);
+          }
+          console.log(`[Mysti] ${this.displayName}: Agent context built with ~${promptContext.estimatedTokens} tokens`);
+          return promptContext.systemPrompt;
+        }
+      } catch (error) {
+        console.warn(`[Mysti] ${this.displayName}: AgentContextManager failed, using fallback:`, error);
+      }
+    }
+
+    // Fallback to static data from IProvider.ts
+    return this.buildAgentInstructionsSync(agentConfig);
+  }
+
+  /**
+   * Synchronous fallback for building agent instructions
+   * Uses static DEVELOPER_PERSONAS and DEVELOPER_SKILLS
+   */
+  protected buildAgentInstructionsSync(agentConfig?: AgentConfiguration): string {
     if (!agentConfig || (!agentConfig.personaId && agentConfig.enabledSkills.length === 0)) {
       return '';
     }
@@ -294,16 +352,25 @@ export abstract class BaseCliProvider implements ICliProvider {
   }
 
   /**
-   * Build the full prompt with context, history, persona, and agent config
+   * @deprecated Use buildAgentInstructionsAsync instead
+   * Kept for backward compatibility
    */
-  protected buildPrompt(
+  protected buildAgentInstructions(agentConfig?: AgentConfiguration): string {
+    return this.buildAgentInstructionsSync(agentConfig);
+  }
+
+  /**
+   * Build the full prompt with context, history, persona, and agent config
+   * Uses async agent loading when AgentContextManager is available
+   */
+  protected async buildPromptAsync(
     content: string,
     context: ContextItem[],
     conversation: Conversation | null,
     settings: Settings,
     persona?: PersonaConfig,
     agentConfig?: AgentConfiguration
-  ): string {
+  ): Promise<string> {
     // Slash commands should be sent raw to the CLI without any modifications
     // They are native CLI commands like /init, /compact, /help, etc.
     if (content.trim().startsWith('/')) {
@@ -313,7 +380,8 @@ export abstract class BaseCliProvider implements ICliProvider {
     let fullPrompt = '';
 
     // PRIORITY 1: Agent configuration (new system) takes precedence
-    const agentInstructions = this.buildAgentInstructions(agentConfig);
+    // Use async loading for three-tier agent system
+    const agentInstructions = await this.buildAgentInstructionsAsync(agentConfig);
     if (agentInstructions) {
       fullPrompt += agentInstructions + '\n\n';
     }
@@ -341,6 +409,55 @@ export abstract class BaseCliProvider implements ICliProvider {
     fullPrompt += content;
 
     // Add quick plan instruction for quick-plan mode
+    if (settings.mode === 'quick-plan') {
+      fullPrompt += '\n\n[Planning Mode] Create ONE concise implementation plan. Focus on the most practical approach without exploring multiple alternatives. Be brief and actionable.';
+    }
+
+    return fullPrompt;
+  }
+
+  /**
+   * @deprecated Use buildPromptAsync instead
+   * Synchronous version for backward compatibility
+   */
+  protected buildPrompt(
+    content: string,
+    context: ContextItem[],
+    conversation: Conversation | null,
+    settings: Settings,
+    persona?: PersonaConfig,
+    agentConfig?: AgentConfiguration
+  ): string {
+    // Slash commands should be sent raw to the CLI without any modifications
+    if (content.trim().startsWith('/')) {
+      return content.trim();
+    }
+
+    let fullPrompt = '';
+
+    // Use sync version for backward compatibility
+    const agentInstructions = this.buildAgentInstructionsSync(agentConfig);
+    if (agentInstructions) {
+      fullPrompt += agentInstructions + '\n\n';
+    } else if (persona) {
+      const personaPrompt = this.getPersonaPrompt(persona);
+      if (personaPrompt) {
+        fullPrompt += personaPrompt + '\n\n';
+      }
+    }
+
+    if (context.length > 0) {
+      fullPrompt += this.formatContext(context);
+      fullPrompt += '\n\n';
+    }
+
+    if (conversation && conversation.messages.length > 0) {
+      fullPrompt += this.formatConversationHistory(conversation);
+      fullPrompt += '\n\n';
+    }
+
+    fullPrompt += content;
+
     if (settings.mode === 'quick-plan') {
       fullPrompt += '\n\n[Planning Mode] Create ONE concise implementation plan. Focus on the most practical approach without exploring multiple alternatives. Be brief and actionable.';
     }

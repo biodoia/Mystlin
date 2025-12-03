@@ -1,3 +1,16 @@
+/**
+ * Mysti - AI Coding Agent
+ * Copyright (c) 2025 DeepMyst Inc. All rights reserved.
+ *
+ * Author: Baha Abunojaim <baha@deepmyst.com>
+ * Website: https://deepmyst.com
+ *
+ * This file is part of Mysti, licensed under the Business Source License 1.1.
+ * See the LICENSE file in the project root for full license terms.
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,7 +28,8 @@ import type {
   StreamChunk,
   ProviderConfig,
   ContextItem,
-  Conversation
+  Conversation,
+  AuthStatus
 } from '../../types';
 
 /**
@@ -146,9 +160,47 @@ export class CodexProvider extends BaseCliProvider {
     return usage;
   }
 
-  async checkAuthentication(): Promise<boolean> {
+  async checkAuthentication(): Promise<AuthStatus> {
     const auth = await this.getAuthConfig();
-    return auth.isAuthenticated;
+    if (!auth.isAuthenticated) {
+      // Check if OPENAI_API_KEY env var is set as alternative
+      if (process.env.OPENAI_API_KEY) {
+        return {
+          authenticated: true,
+          user: 'API Key'
+        };
+      }
+      return {
+        authenticated: false,
+        error: 'Not authenticated. Please run "codex auth login" to sign in with your ChatGPT account, or set OPENAI_API_KEY environment variable.'
+      };
+    }
+
+    // Try to get user info from config
+    try {
+      if (auth.configPath && fs.existsSync(auth.configPath)) {
+        const configContent = fs.readFileSync(auth.configPath, 'utf-8');
+        // TOML parsing - look for email or user field
+        const emailMatch = configContent.match(/email\s*=\s*["']?([^"'\n]+)["']?/);
+        const userMatch = configContent.match(/user\s*=\s*["']?([^"'\n]+)["']?/);
+        return {
+          authenticated: true,
+          user: emailMatch?.[1] || userMatch?.[1] || 'Authenticated'
+        };
+      }
+    } catch {
+      // Config exists but couldn't parse - still authenticated
+    }
+
+    return { authenticated: true };
+  }
+
+  getAuthCommand(): string {
+    return 'codex auth login';
+  }
+
+  getInstallCommand(): string {
+    return 'npm install -g @openai/codex';
   }
 
   /**

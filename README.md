@@ -1,11 +1,11 @@
-# Mysti - AI Coding Assistant
+# Mysti - AI Coding Agent
 
 <p align="center">
   <img src="resources/Mysti-Logo.png" alt="Mysti Logo" width="128" height="128">
 </p>
 
 <p align="center">
-  <strong>A powerful AI coding assistant for VSCode supporting multiple AI backends</strong>
+  <strong>A powerful AI coding agent for VSCode supporting multiple AI backends</strong>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 
 ## Overview
 
-Mysti is a VSCode extension that provides an intelligent AI coding assistant interface. It supports multiple AI providers (Claude Code CLI and OpenAI Codex CLI) and offers advanced features like multi-agent brainstorming, customizable personas, and fine-grained permission controls.
+Mysti is a VSCode extension that provides an intelligent AI coding agent interface. It supports multiple AI providers (Claude Code CLI and OpenAI Codex CLI) and offers advanced features like multi-agent brainstorming, customizable personas, and fine-grained permission controls.
 
 ## Features
 
@@ -101,7 +101,7 @@ Mix and match behavioral modifiers:
 ### Manual Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Mysti.git
+git clone https://github.com/DeepMyst/Mysti.git
 cd Mysti
 
 # Install dependencies
@@ -187,6 +187,22 @@ Access settings via `File > Preferences > Settings` and search for "Mysti".
   - **Claude Code CLI** - Install via `npm install -g @anthropic-ai/claude-code`
   - **OpenAI Codex CLI** - Install via OpenAI's instructions
 
+## Telemetry
+
+Mysti collects anonymous usage data to improve the extension. This includes:
+
+- Feature usage (which personas/skills are popular)
+- Error rates and types
+- Provider/model preferences
+
+**No personal data, code, or file paths are ever collected.**
+
+Telemetry respects VSCode's global setting. To disable:
+
+1. Open Settings (`Ctrl+,` / `Cmd+,`)
+2. Search for "telemetry"
+3. Set `Telemetry: Telemetry Level` to "off"
+
 ## Documentation
 
 - [Features Guide](docs/FEATURES.md) - Detailed feature documentation
@@ -219,14 +235,24 @@ This project is licensed under the **Business Source License 1.1 (BSL 1.1)**.
 
 - **Non-commercial use**: Free for personal, educational, and non-profit use
 - **Commercial use**: Requires a separate commercial license
-- **Change Date**: December 1, 2029 (converts to MIT License)
+- **Change Date**: December 3, 2030 (converts to MIT License)
 
 See the [LICENSE](LICENSE) file for full details.
 
-For commercial licensing inquiries, please contact the author.
+For commercial licensing inquiries, please contact baha@deepmyst.com.
+
+---
+
+## Credits
+
+**Mysti** is developed and maintained by [DeepMyst Inc](https://deepmyst.com).
+
+- **Author:** Baha Abunojaim
+- **Email:** baha@deepmyst.com
+- **GitHub:** [DeepMyst/Mysti](https://github.com/DeepMyst/Mysti)
 
 ---
 
 <p align="center">
-  Made with Claude Code
+  Made with Claude Code by DeepMyst Inc
 </p>
