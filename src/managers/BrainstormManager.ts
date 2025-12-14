@@ -110,6 +110,31 @@ export class BrainstormManager {
   }
 
   /**
+   * Validate that selected providers are available
+   * Returns filtered list of available providers
+   */
+  private async _validateProviderAvailability(
+    selectedProviders: AgentType[]
+  ): Promise<{ available: AgentType[]; unavailable: AgentType[] }> {
+    const available: AgentType[] = [];
+    const unavailable: AgentType[] = [];
+
+    // Get available providers from registry
+    const availableProviders = await this._providerManager.getAvailableProviders();
+    const availableNames = new Set(availableProviders.map(p => p.name));
+
+    for (const providerId of selectedProviders) {
+      if (availableNames.has(providerId)) {
+        available.push(providerId);
+      } else {
+        unavailable.push(providerId);
+      }
+    }
+
+    return { available, unavailable };
+  }
+
+  /**
    * Build agent configurations for the session
    */
   private _buildAgentConfigs(agentIds: AgentType[]): AgentConfig[] {
@@ -151,7 +176,39 @@ export class BrainstormManager {
   ): AsyncGenerator<BrainstormStreamChunk> {
     const sessionId = panelId || 'default';
     const brainstormConfig = this._getConfig();
-    const agentConfigs = this._buildAgentConfigs(brainstormConfig.agents);
+
+    // VALIDATION: Check provider availability
+    const { available, unavailable } = await this._validateProviderAvailability(brainstormConfig.agents);
+
+    // Log warnings for unavailable providers
+    if (unavailable.length > 0) {
+      console.warn(`[Mysti] Brainstorm: Unavailable providers filtered out: ${unavailable.join(', ')}`);
+    }
+
+    // ERROR: Not enough available providers
+    if (available.length < 2) {
+      yield {
+        type: 'agent_error',
+        content: `Brainstorm mode requires at least 2 available providers. Currently available: ${available.length}. Unavailable: ${unavailable.join(', ')}.`
+      };
+      yield { type: 'done' };
+      return;
+    }
+
+    // Use only available providers
+    const validatedConfig = {
+      ...brainstormConfig,
+      agents: available.slice(0, 2) as [AgentType, AgentType]
+    };
+
+    // Validate synthesis agent availability
+    const synthesisAvailable = await this._validateProviderAvailability([brainstormConfig.synthesisAgent]);
+    if (synthesisAvailable.unavailable.length > 0) {
+      console.warn(`[Mysti] Brainstorm: Synthesis agent ${brainstormConfig.synthesisAgent} unavailable, using ${available[0]}`);
+      validatedConfig.synthesisAgent = available[0];
+    }
+
+    const agentConfigs = this._buildAgentConfigs(validatedConfig.agents);
 
     // Create new session for this panel
     const session: BrainstormSession = {
@@ -177,16 +234,16 @@ export class BrainstormManager {
       yield* this._runIndividualPhase(query, context, settings, sessionId);
 
       // Phase 2: Discussion (only in full mode)
-      if (brainstormConfig.discussionMode === 'full') {
+      if (validatedConfig.discussionMode === 'full') {
         yield { type: 'phase_change', phase: 'discussion' };
         session.phase = 'discussion';
-        yield* this._runDiscussionPhase(context, settings, brainstormConfig.discussionRounds, sessionId);
+        yield* this._runDiscussionPhase(context, settings, validatedConfig.discussionRounds, sessionId);
       }
 
       // Phase 3: Synthesis
       yield { type: 'phase_change', phase: 'synthesis' };
       session.phase = 'synthesis';
-      yield* this._runSynthesisPhase(context, settings, brainstormConfig.synthesisAgent, sessionId);
+      yield* this._runSynthesisPhase(context, settings, validatedConfig.synthesisAgent, sessionId);
 
       // Complete
       yield { type: 'phase_change', phase: 'complete' };
