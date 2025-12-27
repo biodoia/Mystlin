@@ -376,13 +376,9 @@ Settings > Telemetry: Telemetry Level > off
 
 ## License
 
-**Business Source License 1.1 (BSL 1.1)**
+MIT License — free to use, modify, and distribute, including for commercial purposes.  
+See the `LICENSE` file for full text.
 
-- **Free** for personal, educational, and non-profit use
-- **Commercial use** requires a separate license
-- Converts to **MIT License** on December 3, 2030
-
-Contact [baha@deepmyst.com](mailto:baha@deepmyst.com) for commercial licensing.
 
 ---
 
@@ -394,5 +390,5 @@ Contact [baha@deepmyst.com](mailto:baha@deepmyst.com) for commercial licensing.
 
 <p align="center">
   <strong>Mysti</strong> — Built by <a href="https://deepmyst.com">DeepMyst Inc</a><br>
-  <sub>Made with Mysti/sub>
+  <sub>Made with Mysti</sub>
 </p>
