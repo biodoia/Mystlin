@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, SpawnOptions } from 'child_process';
 import type {
   ICliProvider,
   CliDiscoveryResult,
@@ -164,15 +164,15 @@ export abstract class BaseCliProvider implements ICliProvider {
     if (thinkingTokens && thinkingTokens > 0) {
       env.MAX_THINKING_TOKENS = String(thinkingTokens);
     }
-
     console.log(`[Mysti] ${this.displayName}: Spawning CLI process...`);
-
-    // OPTIMIZATION: Spawn CLI process immediately (don't wait for prompt building)
-    this._currentProcess = spawn(cliPath, args, {
-      cwd,
-      env,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    // Check if we should use shell for spawning
+    const useShell = vscode.workspace.getConfiguration('mysti').get<boolean>('useShellForCli', false);
+    const spawnOpts: SpawnOptions = { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] };
+    if (useShell) {
+      spawnOpts.shell = true;
+    }
+    
+    this._currentProcess = spawn(cliPath, args, spawnOpts);
 
     const spawnTime = Date.now() - startTime;
     console.log(`[Mysti] ${this.displayName}: CLI spawned in ${spawnTime}ms, building prompt...`);

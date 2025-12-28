@@ -452,6 +452,11 @@
             "No timeout - require explicit user action"
           ],
           "description": "Behavior when permission request times out"
+        },
+        "mysti.useShellForCli": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run AI provider CLIs using a shell (sets shell=true when spawning processes). Enable this on Windows if you see \"spawn EINVAL\" errors with CLI .cmd wrappers."
         }
       }
     },

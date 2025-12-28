@@ -531,8 +531,11 @@ Enhanced prompt:`;
     return new Promise((resolve) => {
       const args = ['--print', '--output-format', 'text'];
 
+      const config = vscode.workspace.getConfiguration('mysti');
+      const useShell = config.get<boolean>('useShellForCli', false);
       const proc = spawn(claudePath, args, {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: useShell
       });
 
       let output = '';
