@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, SpawnOptions } from 'child_process';
 import type {
   ICliProvider,
   CliDiscoveryResult,
@@ -173,12 +173,15 @@ export abstract class BaseCliProvider implements ICliProvider {
         console.log(`[Mysti] ${this.displayName}: Setting MAX_THINKING_TOKENS:`, thinkingTokens);
       }
 
+      // Check if we should use shell for spawning
+      const useShell = vscode.workspace.getConfiguration('mysti').get<boolean>('useShellForCli', false);
+      const spawnOpts: SpawnOptions = { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] };
+      if (useShell) {
+        spawnOpts.shell = true;
+      }
+
       // Spawn the process
-      this._currentProcess = spawn(cliPath, args, {
-        cwd,
-        env,
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
+      this._currentProcess = spawn(cliPath, args, spawnOpts);
 
       // Register process with ProviderManager for per-panel cancellation
       if (panelId && providerManager && typeof (providerManager as any).registerProcess === 'function') {
